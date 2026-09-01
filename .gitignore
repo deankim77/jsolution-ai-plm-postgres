@@ -16,6 +16,9 @@ dist/
 .wrangler/
 .dev.vars
 
+# Local/NAS storage root
+storage/
+
 # Logs
 *.log
 npm-debug.log*
