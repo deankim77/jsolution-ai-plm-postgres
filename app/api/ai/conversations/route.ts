@@ -2,6 +2,7 @@
 import { getChatGPTUser } from "../../../chatgpt-auth";
 import { buildAiGovernancePrompt } from "../ai-governance";
 import {contextErrorResponse,resolveRequestContext} from "../../../../db/request-context";
+import { getLegacyDbCompat } from "../../../../db/postgres-d1-compat";
 
 const MAX_CONTEXT_FILE_BYTES = 12 * 1024 * 1024;
 const MAX_CONTEXT_FILES = 5;
@@ -32,8 +33,7 @@ function parseArray<T>(value:unknown):T[]{
 }
 
 async function runtime(): Promise<{DB:D1;FILES?:R2Bucket}> {
-  const cloudflare = await import("cloudflare:workers");
-  return cloudflare.env as unknown as {DB:D1;FILES?:R2Bucket};
+  return {DB:getLegacyDbCompat() as unknown as D1};
 }
 
 function aiConnectionMessage(detail:string){
@@ -106,7 +106,7 @@ async function generateOpenAI(contextTitle:string,items:ContextItem[],files:Cont
 
 export async function GET(request: Request) {
   const authenticated=await getChatGPTUser();const {DB:db}=await runtime();await ensureAiWorkspace(db);let context;try{context=await resolveRequestContext(request,db,{email:authenticated?.email})}catch(reason){return contextErrorResponse(reason)??Response.json({error:"로그인이 필요합니다."},{status:401})}const conversationId=new URL(request.url).searchParams.get("id");
-  if(conversationId){const conversation=await db.prepare(`SELECT id,title,source,context_type AS contextType,context_title AS contextTitle,context_items AS contextItems,group_name AS groupName,created_at AS createdAt,updated_at AS updatedAt FROM ai_conversations WHERE id=? AND company_id=? AND user_id=?`).bind(conversationId,context.companyId,context.userId).first<any>();if(!conversation)return Response.json({error:"대화를 찾을 수 없습니다."},{status:404});const messages=await db.prepare(`SELECT id,role,content,citations,created_at AS createdAt FROM ai_messages WHERE conversation_id=? ORDER BY created_at ASC,rowid ASC`).bind(conversationId).all();return Response.json({conversation:{...conversation,contextItems:parseArray<ContextItem>(conversation.contextItems)},messages:(messages.results??[]).map((row:any)=>({...row,citations:parseArray<unknown>(row.citations)}))});}
+  if(conversationId){const conversation=await db.prepare(`SELECT id,title,source,context_type AS contextType,context_title AS contextTitle,context_items AS contextItems,group_name AS groupName,created_at AS createdAt,updated_at AS updatedAt FROM ai_conversations WHERE id=? AND company_id=? AND user_id=?`).bind(conversationId,context.companyId,context.userId).first<any>();if(!conversation)return Response.json({error:"대화를 찾을 수 없습니다."},{status:404});const messages=await db.prepare(`SELECT id,role,content,citations,created_at AS createdAt FROM ai_messages WHERE conversation_id=? ORDER BY created_at ASC,id ASC`).bind(conversationId).all();return Response.json({conversation:{...conversation,contextItems:parseArray<ContextItem>(conversation.contextItems)},messages:(messages.results??[]).map((row:any)=>({...row,citations:parseArray<unknown>(row.citations)}))});}
   const result=await db.prepare(`SELECT id,title,source,context_type AS contextType,context_title AS contextTitle,context_items AS contextItems,group_name AS groupName,created_at AS createdAt,updated_at AS updatedAt FROM ai_conversations WHERE company_id=? AND user_id=? ORDER BY updated_at DESC LIMIT 100`).bind(context.companyId,context.userId).all();return Response.json({conversations:(result.results??[]).map((row:any)=>({...row,contextItems:parseArray<ContextItem>(row.contextItems)}))});
 }
 
@@ -115,7 +115,7 @@ export async function POST(request: Request) {
   const input=await request.json() as {id?:string;title?:string;source?:string;contextType?:string;contextTitle?:string;contextItems?:ContextItem[];message?:string};const message=input.message?.trim();if(!message)return Response.json({error:"대화 내용을 입력해 주세요."},{status:400});
   const {DB:db,FILES}=await runtime();await ensureAiWorkspace(db);let context;try{context=await resolveRequestContext(request,db,{email:authenticated?.email})}catch(reason){return contextErrorResponse(reason)??Response.json({error:"로그인이 필요합니다."},{status:401})}const now=Math.floor(Date.now()/1000),id=input.id||crypto.randomUUID();const existing=await db.prepare("SELECT id,title,context_title AS contextTitle,context_items AS contextItems FROM ai_conversations WHERE id=? AND company_id=? AND user_id=?").bind(id,context.companyId,context.userId).first<any>();
   const existingItems=existing?parseArray<ContextItem>(existing.contextItems):[],items=(input.contextItems?.length?input.contextItems:existingItems),contextTitle=input.contextTitle||existing?.contextTitle||"MY AI 대화";
-  const historyResult=existing?await db.prepare(`SELECT role,content FROM ai_messages WHERE conversation_id=? ORDER BY created_at DESC,rowid DESC LIMIT ${MAX_HISTORY_MESSAGES}`).bind(id).all():{results:[] as any[]};const history=[...(historyResult.results||[])].reverse().filter(row=>!/OpenAI (파일 분석|응답|연결)/.test(String(row.content||"")));const projectName=projectNameFromContext(contextTitle),contextFiles=await resolveContextFiles(db,FILES,items,projectName,context.companyId);const persistedItems=items.map(item=>{const file=contextFiles.find(candidate=>candidate.deliverableId===item.id||candidate.title===item.title);return file?{...item,id:file.deliverableId,fileName:file.fileName,revision:file.revision,fileAttached:true}:item});
+  const historyResult=existing?await db.prepare(`SELECT role,content FROM ai_messages WHERE conversation_id=? ORDER BY created_at DESC,id DESC LIMIT ${MAX_HISTORY_MESSAGES}`).bind(id).all():{results:[] as any[]};const history=[...(historyResult.results||[])].reverse().filter(row=>!/OpenAI (파일 분석|응답|연결)/.test(String(row.content||"")));const projectName=projectNameFromContext(contextTitle),contextFiles=await resolveContextFiles(db,FILES,items,projectName,context.companyId);const persistedItems=items.map(item=>{const file=contextFiles.find(candidate=>candidate.deliverableId===item.id||candidate.title===item.title);return file?{...item,id:file.deliverableId,fileName:file.fileName,revision:file.revision,fileAttached:true}:item});
   const statements:D1Statement[]=[];
   if(!existing){statements.push(db.prepare(`INSERT INTO ai_conversations (id,company_id,user_id,title,source,context_type,context_title,context_items,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?)`).bind(id,context.companyId,context.userId,input.title||message.slice(0,42),input.source||"MY AI HOME",input.contextType||"workspace",contextTitle,JSON.stringify(persistedItems),now,now));}
   else{statements.push(db.prepare(`UPDATE ai_conversations SET title=?,source=?,context_type=?,context_title=?,context_items=?,updated_at=? WHERE id=? AND company_id=? AND user_id=?`).bind(input.title||existing.title||message.slice(0,42),input.source||"MY AI HOME",input.contextType||"workspace",contextTitle,JSON.stringify(persistedItems),now,id,context.companyId,context.userId));}

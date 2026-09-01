@@ -37,7 +37,7 @@ export async function GET(request:Request){
             SUM(CASE WHEN kind='task' THEN 1 ELSE 0 END) AS taskCount,
             SUM(CASE WHEN kind='task' AND status='completed' THEN 1 ELSE 0 END) AS completedCount,
             SUM(CASE WHEN kind='task' AND status='review' THEN 1 ELSE 0 END) AS reviewCount,
-            SUM(CASE WHEN kind='task' AND status NOT IN ('completed','review') AND planned_end IS NOT NULL AND planned_end<date('now') THEN 1 ELSE 0 END) AS delayedCount
+            SUM(CASE WHEN kind='task' AND status NOT IN ('completed','review') AND planned_end IS NOT NULL AND planned_end<CURRENT_DATE::text THEN 1 ELSE 0 END) AS delayedCount
           FROM wbs_tasks GROUP BY project_id
         ), deliverable_stats AS (
           SELECT project_id,
@@ -74,7 +74,7 @@ export async function GET(request:Request){
             SUM(CASE WHEN s.status='completed' THEN 1 ELSE 0 END) AS completedActivityCount,
             MIN(s.planned_start) AS segmentStart,
             MAX(s.planned_end) AS segmentEnd,
-            COALESCE(MAX(CASE WHEN s.status NOT IN ('completed','review') AND s.planned_end IS NOT NULL AND s.planned_end<date('now') THEN CAST(julianday('now')-julianday(s.planned_end) AS INTEGER) ELSE 0 END),0) AS delayDays
+            COALESCE(MAX(CASE WHEN s.status NOT IN ('completed','review') AND s.planned_end IS NOT NULL AND s.planned_end<date('now') THEN (CURRENT_DATE - s.planned_end::date) ELSE 0 END),0) AS delayDays
           FROM wbs_tasks g
           LEFT JOIN wbs_tasks s ON s.project_id=g.project_id AND s.parent_id=g.parent_id AND s.id<>g.id AND s.kind<>'summary'
           WHERE g.task_type='gate'
@@ -105,7 +105,7 @@ export async function GET(request:Request){
         LEFT JOIN gate_task_stats gts ON gts.gateTaskId=w.id
         LEFT JOIN gate_deliverable_stats gds ON gds.gateTaskId=w.id
         LEFT JOIN gate_issue_stats gis ON gis.gateTaskId=w.id
-        LEFT JOIN project_gate_decisions d ON d.id=(SELECT d2.id FROM project_gate_decisions d2 WHERE d2.project_id=p.id AND d2.gate_task_id=w.id ORDER BY d2.decided_at DESC,d2.rowid DESC LIMIT 1)
+        LEFT JOIN project_gate_decisions d ON d.id=(SELECT d2.id FROM project_gate_decisions d2 WHERE d2.project_id=p.id AND d2.gate_task_id=w.id ORDER BY d2.decided_at DESC,d2.id DESC LIMIT 1)
         LEFT JOIN users u ON u.id=d.decided_by WHERE p.company_id=? AND w.task_type='gate' ORDER BY p.id,w.sort_order`).bind(user.companyId).all<any>(),
       listUnreadNotifications(db,user.companyId,user.id,50),
     ]);

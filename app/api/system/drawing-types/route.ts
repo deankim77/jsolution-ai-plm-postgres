@@ -33,7 +33,7 @@ async function ensureDrawingTypes(db:D1,companyId:string){
 export async function GET(request:Request){
   const db=await runtimeDb();
   let context;
-  try{await ensureProjectDataFoundation(db);context=await resolveRequestContext(request,db);await ensureDrawingTypes(db,context.companyId)}catch(reason){return contextErrorResponse(reason)??Response.json({error:"도면 유형을 불러오지 못했습니다."},{status:500})}
+  try{await ensureProjectDataFoundation(db);context=await resolveRequestContext(request,db);await ensureDrawingTypes(db,context.companyId)}catch(reason){console.error("[DRAWING_TYPES_ERROR]",reason);return contextErrorResponse(reason)??Response.json({error:"도면 유형을 불러오지 못했습니다."},{status:500})}
   const result=await db.prepare("SELECT id,group_code AS groupCode,code,label,version,sort_order AS sortOrder,enabled FROM common_codes WHERE company_id=? AND group_code=? ORDER BY sort_order,code").bind(context.companyId,GROUP_CODE).all();
   return Response.json({groupCode:GROUP_CODE,codes:result.results??[]});
 }

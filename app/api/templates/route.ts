@@ -62,7 +62,7 @@ export async function GET(request:Request) {
       JOIN template_versions tv ON tv.id = (
         SELECT tv2.id FROM template_versions tv2
          WHERE tv2.template_id = t.id
-         ORDER BY tv2.updated_at DESC, tv2.created_at DESC, tv2.rowid DESC LIMIT 1
+         ORDER BY tv2.updated_at DESC, tv2.created_at DESC, tv2.id DESC LIMIT 1
       )
       LEFT JOIN users u ON u.id = tv.created_by
      WHERE t.company_id = ? ORDER BY CASE WHEN t.status = 'inactive' THEN 1 ELSE 0 END ASC, t.updated_at DESC, t.name ASC

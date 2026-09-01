@@ -24,7 +24,7 @@ export async function GET(request:Request){
           SUM(CASE WHEN kind='task' THEN 1 ELSE 0 END) AS taskCount,
           SUM(CASE WHEN kind='task' AND status='completed' THEN 1 ELSE 0 END) AS completedCount,
           SUM(CASE WHEN kind='task' AND status='review' THEN 1 ELSE 0 END) AS reviewCount,
-          SUM(CASE WHEN kind='task' AND status NOT IN ('completed','review') AND planned_end IS NOT NULL AND planned_end<date('now') THEN 1 ELSE 0 END) AS delayedCount
+          SUM(CASE WHEN kind='task' AND status NOT IN ('completed','review') AND planned_end IS NOT NULL AND planned_end<CURRENT_DATE::text THEN 1 ELSE 0 END) AS delayedCount
         FROM wbs_tasks GROUP BY project_id
       ), deliverable_stats AS (
         SELECT project_id,SUM(CASE WHEN required=1 AND status!='submitted' THEN 1 ELSE 0 END) AS missingDeliverables
@@ -49,7 +49,7 @@ export async function GET(request:Request){
       LEFT JOIN issue_stats ix ON ix.project_id=p.id
       WHERE p.company_id=?`).bind(context.companyId).all<any>(),
     db.prepare(`SELECT p.id AS projectId,REPLACE(w.wbs_code,'-REVIEW','') AS gateCode,w.status,
-        (SELECT d.decision FROM project_gate_decisions d WHERE d.project_id=p.id AND d.gate_task_id=w.id ORDER BY d.decided_at DESC,d.rowid DESC LIMIT 1) AS decision
+        (SELECT d.decision FROM project_gate_decisions d WHERE d.project_id=p.id AND d.gate_task_id=w.id ORDER BY d.decided_at DESC,d.id DESC LIMIT 1) AS decision
       FROM projects p JOIN wbs_tasks w ON w.project_id=p.id
       WHERE p.company_id=? AND w.task_type='gate'
       ORDER BY p.id,w.sort_order`).bind(context.companyId).all<any>(),

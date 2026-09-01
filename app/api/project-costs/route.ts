@@ -64,7 +64,7 @@ async function accessibleProjects(db:D1,context:any){
   const admin=context.systemRoles.some((role:string)=>ADMIN_ROLES.has(role));
   const sql=admin
     ?"SELECT id,code,name,status FROM projects WHERE company_id=? ORDER BY updated_at DESC,name"
-    :"SELECT DISTINCT p.id,p.code,p.name,p.status FROM projects p LEFT JOIN project_members pm ON pm.project_id=p.id WHERE p.company_id=? AND pm.user_id=? ORDER BY p.updated_at DESC,p.name";
+    :"SELECT p.id,p.code,p.name,p.status FROM projects p WHERE p.company_id=? AND EXISTS (SELECT 1 FROM project_members pm WHERE pm.project_id=p.id AND pm.user_id=?) ORDER BY p.updated_at DESC,p.name";
   const rows=admin?await db.prepare(sql).bind(context.companyId).all():await db.prepare(sql).bind(context.companyId,context.userId).all();
   return rows.results??[];
 }
