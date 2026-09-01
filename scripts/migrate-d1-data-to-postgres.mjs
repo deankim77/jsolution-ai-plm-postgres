@@ -124,11 +124,17 @@ try {
     targetColumns.get(row.table_name).push(row);
   }
 
+  const columnMismatches = [];
   for (const table of sourceNames) {
     const sourceCols = new Set(sourceTables[table].columns);
     const targetCols = new Set((targetColumns.get(table) ?? []).map(c => c.column_name));
     const sourceOnly = [...sourceCols].filter(c => !targetCols.has(c));
-    if (sourceOnly.length) throw new Error(`Column mismatch in ${table}; missing PostgreSQL columns: ${sourceOnly.join(", ")}`);
+    if (sourceOnly.length) columnMismatches.push({ table, columns: sourceOnly });
+  }
+  if (columnMismatches.length) {
+    console.error("D1 columns missing from PostgreSQL:");
+    for (const item of columnMismatches) console.error(`  ${item.table}: ${item.columns.join(", ")}`);
+    throw new Error(`Column mismatch detected in ${columnMismatches.length} table(s). No PostgreSQL data was modified.`);
   }
 
   const fkResult = await client.query(`
