@@ -36,10 +36,15 @@ for (const file of roots.flatMap((name) => walk(path.join(root, name)))) {
   let source = fs.readFileSync(file, "utf8");
   const before = source;
 
-  // Direct env.DB references, including dynamic imports resolved to runtime.env.DB.
-  source = source.replace(/\benv\.DB\b/g, "getLegacyDbCompat()");
-  source = source.replace(/\bruntime\.env\.DB\b/g, "getLegacyDbCompat()");
+  // Repair files produced by the first replacement pass where `env.DB`
+  // was replaced inside `runtime.env.DB`, yielding runtime.getLegacyDbCompat().
+  source = source.replace(/\bruntime\.getLegacyDbCompat\(\)/g, "getLegacyDbCompat()");
+
+  // Replace the most specific forms first so env.DB does not partially
+  // rewrite runtime.env.DB.
   source = source.replace(/\((?:await\s+)?import\(["']cloudflare:workers["']\)\)\.env\.DB/g, "getLegacyDbCompat()");
+  source = source.replace(/\bruntime\.env\.DB\b/g, "getLegacyDbCompat()");
+  source = source.replace(/\benv\.DB\b/g, "getLegacyDbCompat()");
 
   if (source !== before) {
     source = ensureCompatImport(source, file);
