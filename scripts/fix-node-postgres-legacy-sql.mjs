@@ -54,18 +54,57 @@ for (const file of roots.flatMap(name => walk(path.join(root, name)))) {
   }
 }
 
+// Harden the shared SQLite -> PostgreSQL SQL translator.
 const compatPath = path.join(root, "db", "postgres-d1-compat.ts");
 let compat = fs.readFileSync(compatPath, "utf8");
 const compatBefore = compat;
-if (!compat.includes("GROUP_CONCAT compatibility")) {
-  compat = compat.replace(
-    /\s*sql = sql\.replace\(\/json_extract\\\(\(\[\^,\]\+\),\\s\*'\\\$\\\.\(\[A-Za-z0-9_\]\+\)'\\\)\/gi, \"\(\$1::jsonb ->> '\$2'\)\"\);/,
-    match => `${match}\n\n  // GROUP_CONCAT compatibility: SQLite -> PostgreSQL string_agg.\n  sql = sql.replace(/GROUP_CONCAT\\(\\s*DISTINCT\\s+([^)]+)\\)/gi, \"string_agg(DISTINCT ($1)::text, ',')\");\n  sql = sql.replace(/GROUP_CONCAT\\(\\s*([^)]+)\\)/gi, \"string_agg(($1)::text, ',')\");\n\n  // SQLite date('now') compatibility. Legacy date fields are YYYY-MM-DD text.\n  sql = sql.replace(/date\\(\\s*'now'\\s*\\)/gi, \"CURRENT_DATE::text\");`
-  );
+const compatBlock = `  // GROUP_CONCAT compatibility: SQLite -> PostgreSQL string_agg.\n  // Handles DISTINCT, explicit separator, and the default comma separator.\n  sql = sql.replace(/GROUP_CONCAT\\(\\s*DISTINCT\\s+([^,()]+)\\s*\\)/gi, "string_agg(DISTINCT ($1)::text, ',')");\n  sql = sql.replace(/GROUP_CONCAT\\(\\s*([^,()]+)\\s*,\\s*'([^']*)'\\s*\\)/gi, "string_agg(($1)::text, '$2')");\n  sql = sql.replace(/GROUP_CONCAT\\(\\s*([^,()]+)\\s*\\)/gi, "string_agg(($1)::text, ',')");\n\n  // SQLite date('now') returns YYYY-MM-DD text; preserve that comparison behavior.\n  sql = sql.replace(/date\\(\\s*'now'\\s*\\)/gi, "CURRENT_DATE::text");\n`;
+if (/  \/\/ GROUP_CONCAT compatibility:[\s\S]*?sql = sql\.replace\(\/date\\\\\([\s\S]*?\);\n/.test(compat)) {
+  compat = compat.replace(/  \/\/ GROUP_CONCAT compatibility:[\s\S]*?sql = sql\.replace\(\/date\\\\\([\s\S]*?\);\n/, compatBlock);
+} else if (!compat.includes("GROUP_CONCAT compatibility")) {
+  compat = compat.replace(/(\s*sql = sql\.replace\(\/json_extract[\s\S]*?;\n)(\s*return sql;)/, `$1\n${compatBlock}$2`);
 }
 if (compat !== compatBefore) {
   fs.writeFileSync(compatPath, compat, "utf8");
   changed.push("db/postgres-d1-compat.ts");
+}
+
+// PostgreSQL is strict about GROUP BY. Replace the SQLite-style aggregate join
+// in the project list with a correlated member-count subquery and remove GROUP BY.
+const projectsPath = path.join(root, "app", "api", "projects", "route.ts");
+if (fs.existsSync(projectsPath)) {
+  let source = fs.readFileSync(projectsPath, "utf8");
+  const before = source;
+  source = source.replace(
+    /COUNT\(pm\.user_id\) AS memberCount,/g,
+    "(SELECT COUNT(*) FROM project_members pmc WHERE pmc.project_id=p.id) AS memberCount,",
+  );
+  source = source.replace(/\s*LEFT JOIN project_members pm ON pm\.project_id = p\.id/g, "");
+  source = source.replace(/\s*GROUP BY p\.id/g, "");
+  // All these objects are migration-owned in PostgreSQL.
+  source = source.replace(
+    /function ensureProjectMasterLinks\(db:D1\)\{[\s\S]*?return ready\}/,
+    "function ensureProjectMasterLinks(_db:D1){return Promise.resolve()}",
+  );
+  if (source !== before) {
+    fs.writeFileSync(projectsPath, source, "utf8");
+    changed.push("app/api/projects/route.ts");
+  }
+}
+
+// ECR compatibility columns are now migration-owned as well.
+const ecrPath = path.join(root, "app", "api", "ecr", "route.ts");
+if (fs.existsSync(ecrPath)) {
+  let source = fs.readFileSync(ecrPath, "utf8");
+  const before = source;
+  source = source.replace(
+    /async function ensureEcrDrawingCompatibility\(db:any\)\{[\s\S]*?\}\nasync function drawingFor/,
+    "async function ensureEcrDrawingCompatibility(_db:any){return}\nasync function drawingFor",
+  );
+  if (source !== before) {
+    fs.writeFileSync(ecrPath, source, "utf8");
+    changed.push("app/api/ecr/route.ts");
+  }
 }
 
 const notificationPath = path.join(root, "app", "api", "notifications", "notification-service.ts");
