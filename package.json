@@ -24,6 +24,8 @@
     "audit:sqlite-legacy": "node scripts/audit-sqlite-legacy.mjs",
     "lint": "npm run check:architecture && npm run check:v2-ui && bash scripts/sites-env.sh -- eslint . --ignore-pattern dist --ignore-pattern .next",
     "db:convert:postgres": "node scripts/convert-schema-to-postgres.mjs",
+    "db:normalize:compat": "node scripts/normalize-postgres-compat-types.mjs",
+    "db:replace:d1-bindings": "node scripts/replace-d1-db-binding.mjs",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
     "db:studio": "drizzle-kit studio",
