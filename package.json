@@ -37,7 +37,7 @@
     "test:auto-g6": "node --test tests/automotive-g6-portfolio.test.mjs",
     "data:generate:auto-g6-docs": "node scripts/generate-automotive-g6-deliverables.mjs --clean",
     "data:upload:auto-g6-docs": "node scripts/upload-automotive-g6-deliverables.mjs",
-    "data:seed:auto-g6-docs": "npm run data:generate:auto-g6-docs && npm run data:upload:auto-g6-deliverables.mjs",
+    "data:seed:auto-g6-docs": "npm run data:generate:auto-g6-docs && npm run data:upload:auto-g6-docs",
     "data:seed:auto-g6-execution": "node scripts/seed-automotive-g6-execution.mjs",
     "data:seed:auto-g6-all": "npm run data:seed:auto-g6 && npm run data:seed:auto-g6-docs && npm run data:seed:auto-g6-execution",
     "data:seed:hdem": "node scripts/seed-hdem-equipment-demo.mjs",
