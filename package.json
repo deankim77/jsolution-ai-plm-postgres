@@ -21,6 +21,7 @@
     "check:contracts": "npm run check:architecture && npm run check:v2-ui",
     "check:v2-features": "node scripts/check-v2-feature-contracts.mjs",
     "audit:react-dom": "node scripts/audit-react-dom-overrides.mjs",
+    "audit:sqlite-legacy": "node scripts/audit-sqlite-legacy.mjs",
     "lint": "npm run check:architecture && npm run check:v2-ui && bash scripts/sites-env.sh -- eslint . --ignore-pattern dist --ignore-pattern .next",
     "db:convert:postgres": "node scripts/convert-schema-to-postgres.mjs",
     "db:generate": "drizzle-kit generate",
