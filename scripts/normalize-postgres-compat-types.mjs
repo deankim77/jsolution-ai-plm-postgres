@@ -19,7 +19,11 @@ if (!source.includes('from "drizzle-orm/pg-core"')) {
 source = source
   .replace(/\btimestamp\(([^,()]+),\s*\{\s*withTimezone\s*:\s*true\s*,\s*mode\s*:\s*["']date["']\s*\}\)/g, 'integer($1)')
   .replace(/\bboolean\(([^)]+)\)/g, 'integer($1)')
-  .replace(/\bjsonb\(([^)]+)\)/g, 'text($1)');
+  .replace(/\bjsonb\(([^)]+)\)/g, 'text($1)')
+  // Drizzle keeps boolean defaults when a boolean() column is converted to integer().
+  // PostgreSQL rejects `integer DEFAULT true/false`, so preserve D1 semantics as 1/0.
+  .replace(/\.default\(true\)/g, '.default(1)')
+  .replace(/\.default\(false\)/g, '.default(0)');
 
 source = source.replace(
   /import\s*\{([^}]*)\}\s*from\s*["']drizzle-orm\/pg-core["'];?/,
@@ -34,10 +38,15 @@ source = source.replace(
   }
 );
 
-const forbidden = [/\btimestamp\(/, /\bboolean\(/, /\bjsonb\(/];
+const forbidden = [
+  /\btimestamp\(/,
+  /\bboolean\(/,
+  /\bjsonb\(/,
+  /\.default\((?:true|false)\)/,
+];
 if (forbidden.some((re) => re.test(source))) {
-  throw new Error("Compatibility normalization left native timestamp/boolean/jsonb constructors in db/schema.ts");
+  throw new Error("Compatibility normalization left native timestamp/boolean/jsonb constructors or boolean defaults in db/schema.ts");
 }
 
 fs.writeFileSync(schemaPath, source, "utf8");
-console.log("Normalized PostgreSQL schema for legacy API compatibility: epoch/boolean/json remain integer/text during migration.");
+console.log("Normalized PostgreSQL schema for legacy API compatibility: epoch/boolean/json remain integer/text during migration; boolean defaults are 1/0.");
