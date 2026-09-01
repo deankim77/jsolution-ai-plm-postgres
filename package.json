@@ -27,7 +27,7 @@
     "db:normalize:compat": "node scripts/normalize-postgres-compat-types.mjs",
     "db:replace:d1-bindings": "node scripts/replace-d1-db-binding.mjs",
     "db:generate": "drizzle-kit generate",
-    "db:migrate": "drizzle-kit migrate",
+    "db:migrate": "node scripts/migrate-postgres.mjs",
     "db:studio": "drizzle-kit studio",
     "data:seed:cim": "node scripts/seed-cim-demo.mjs",
     "data:upload:cim-docs": "node scripts/upload-cim-sample-deliverables.mjs",
