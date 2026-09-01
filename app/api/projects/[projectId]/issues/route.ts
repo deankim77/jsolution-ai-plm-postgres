@@ -1,11 +1,12 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import {canManageProject,contextErrorResponse,requireProjectAccess,resolveRequestContext} from "../../../../../db/request-context";
+import {getStorageAdapter} from "../../../../../lib/storage-adapter";
 type D1={prepare:(sql:string)=>any;batch:(statements:any[])=>Promise<unknown>};
 type R2Object={body:ReadableStream;httpMetadata?:{contentType?:string}};
 type R2Bucket={put:(key:string,value:ReadableStream|ArrayBuffer|Blob|string,options?:any)=>Promise<unknown>;get:(key:string)=>Promise<R2Object|null>};
 const TYPES=new Set(["issue","risk","collaboration"]),STATUSES=new Set(["open","in_progress","resolved","closed"]),SEVERITIES=new Set(["low","medium","high","critical"]);
 const issueSchemaReadyByDb=new WeakMap<object,Promise<void>>();
-async function runtime(){const runtime=await import("cloudflare:workers");return runtime.env as unknown as {DB:D1;FILES?:R2Bucket};}
+async function runtime(){return {DB:getLegacyDbCompat() as unknown as D1,FILES:getStorageAdapter() as unknown as R2Bucket};}
 function ensureTables(db:D1){const key=db as object,existing=issueSchemaReadyByDb.get(key);if(existing)return existing;const ready=ensureTablesImpl(db).catch(reason=>{issueSchemaReadyByDb.delete(key);throw reason});issueSchemaReadyByDb.set(key,ready);return ready;}
 async function ensureTablesImpl(db:D1){
   await db.prepare(`CREATE TABLE IF NOT EXISTS project_issues (

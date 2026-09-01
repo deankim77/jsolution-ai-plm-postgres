@@ -1,6 +1,8 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import {contextErrorResponse,resolveRequestContext} from "../../../../db/request-context";
 import type {RuntimeD1} from "../../../../db/project-data-foundation";
+import {getStorageAdapter} from "../../../../lib/storage-adapter";
+import {getLegacyDbCompat} from "../../../../db/postgres-d1-compat";
 
 type R2Object={body:ReadableStream};
 type R2Bucket={get:(key:string)=>Promise<R2Object|null>};
@@ -10,7 +12,7 @@ const MAX_FILE_BYTES=12*1024*1024;
 const MAX_TOTAL_BYTES=24*1024*1024;
 const MAX_REVISIONS=4;
 
-async function runtime(){const cloudflare=await import("cloudflare:workers");return cloudflare.env as unknown as RuntimeEnv;}
+async function runtime(){return {DB:getLegacyDbCompat() as unknown as RuntimeD1,FILES:getStorageAdapter() as unknown as R2Bucket} satisfies RuntimeEnv;}
 function bytesToBase64(bytes:Uint8Array){let binary="";const chunk=0x8000;for(let offset=0;offset<bytes.length;offset+=chunk)binary+=String.fromCharCode(...bytes.subarray(offset,Math.min(offset+chunk,bytes.length)));return btoa(binary);}
 function outputText(data:any){if(data.output_text?.trim())return data.output_text.trim();return (data.output||[]).flatMap((item:any)=>item.content||[]).filter((item:any)=>item.type==="output_text"&&item.text).map((item:any)=>String(item.text).trim()).filter(Boolean).join("\n").trim();}
 

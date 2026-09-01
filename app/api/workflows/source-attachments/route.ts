@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import {contextErrorResponse,requireProjectAccess,resolveRequestContext} from "../../../../db/request-context";
 import {workflowDb} from "../shared";
+import {getStorageAdapter} from "../../../../lib/storage-adapter";
 
 type R2Object={body:ReadableStream;httpMetadata?:{contentType?:string}};
 type R2Bucket={get:(key:string)=>Promise<R2Object|null>};
@@ -15,7 +16,7 @@ export async function GET(request:Request){
     if(!item)return Response.json({error:"첨부파일을 찾을 수 없습니다."},{status:404});
     try{await requireProjectAccess(db,context,item.projectId)}
     catch(reason){return contextErrorResponse(reason)??Response.json({error:"첨부파일 접근 권한이 없습니다."},{status:403})}
-    const runtime=await import("cloudflare:workers"),FILES=(runtime.env as unknown as {FILES?:R2Bucket}).FILES;if(!FILES)return Response.json({error:"파일 저장소가 연결되지 않았습니다."},{status:503});
+    const FILES=getStorageAdapter() as unknown as R2Bucket;
     const object=await FILES.get(item.fileKey);if(!object)return Response.json({error:"저장된 파일을 찾을 수 없습니다."},{status:404});
     return new Response(object.body,{headers:{"content-type":item.contentType||object.httpMetadata?.contentType||"application/octet-stream","content-disposition":`attachment; filename*=UTF-8''${encodeURIComponent(item.fileName)}`}});
   }

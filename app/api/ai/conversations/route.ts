@@ -2,6 +2,7 @@
 import { getChatGPTUser } from "../../../chatgpt-auth";
 import { buildAiGovernancePrompt } from "../ai-governance";
 import {contextErrorResponse,resolveRequestContext} from "../../../../db/request-context";
+import {getStorageAdapter} from "../../../../lib/storage-adapter";
 import { getLegacyDbCompat } from "../../../../db/postgres-d1-compat";
 
 const MAX_CONTEXT_FILE_BYTES = 12 * 1024 * 1024;
@@ -33,7 +34,7 @@ function parseArray<T>(value:unknown):T[]{
 }
 
 async function runtime(): Promise<{DB:D1;FILES?:R2Bucket}> {
-  return {DB:getLegacyDbCompat() as unknown as D1};
+  return {DB:getLegacyDbCompat() as unknown as D1,FILES:getStorageAdapter() as unknown as R2Bucket};
 }
 
 function aiConnectionMessage(detail:string){

@@ -2,6 +2,8 @@
 import { getChatGPTUser } from "../../../chatgpt-auth";
 import { buildAiGovernancePrompt } from "../ai-governance";
 import {contextErrorResponse,resolveRequestContext} from "../../../../db/request-context";
+import {getStorageAdapter} from "../../../../lib/storage-adapter";
+import {getLegacyDbCompat} from "../../../../db/postgres-d1-compat";
 
 const MAX_CONTEXT_FILE_BYTES = 12 * 1024 * 1024;
 const MAX_CONTEXT_FILES = 5;
@@ -50,8 +52,7 @@ type OpenAIResponse = {
 };
 
 async function runtime(): Promise<{ DB: D1; FILES?: R2Bucket }> {
-  const cloudflare = await import("cloudflare:workers");
-  return cloudflare.env as unknown as { DB: D1; FILES?: R2Bucket };
+  return {DB:getLegacyDbCompat() as unknown as D1,FILES:getStorageAdapter() as unknown as R2Bucket};
 }
 
 async function ensureAiWorkspace(db: D1) {
@@ -220,7 +221,7 @@ export async function POST(request: Request) {
   const contextTitle = `${contextBase} · 선택 문맥 ${contextItems.length}건${contextFiles.length ? ` · 원본 파일 ${contextFiles.length}건` : ""}`;
   const existingConversation = await db.prepare("SELECT id FROM ai_conversations WHERE id=? AND company_id=? AND user_id=?").bind(conversationId, context.companyId, context.userId).first();
   const previous = existingConversation
-    ? await db.prepare(`SELECT role,content FROM ai_messages WHERE conversation_id=? ORDER BY created_at DESC,rowid DESC LIMIT ${MAX_HISTORY_MESSAGES}`).bind(conversationId).all()
+    ? await db.prepare(`SELECT role,content FROM ai_messages WHERE conversation_id=? ORDER BY created_at DESC,id DESC LIMIT ${MAX_HISTORY_MESSAGES}`).bind(conversationId).all()
     : { results: [] as any[] };
   const history = [...(previous.results || [])].reverse().filter(row => !/OpenAI (파일 분석|응답|연결)/.test(String(row.content || "")));
   const persistedContext = contextItems.map(item => {

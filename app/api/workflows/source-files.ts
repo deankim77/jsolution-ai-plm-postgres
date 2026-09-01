@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import type {RequestContext} from "../../../db/request-context";
 import type {D1} from "./shared";
+import {getStorageAdapter} from "../../../lib/storage-adapter";
 
 type R2Bucket={put:(key:string,value:ReadableStream|ArrayBuffer|Blob|string,options?:any)=>Promise<unknown>;delete:(key:string)=>Promise<unknown>};
 export type SourceUploadInput={input:any;files:File[]};
@@ -18,8 +19,7 @@ export async function readSourceUpload(request:Request):Promise<SourceUploadInpu
 export async function syncSourceAttachments(db:D1,context:RequestContext,{projectId,sourceType,sourceId,files,removeAttachmentIds=[]}:{projectId:string;sourceType:"ECR"|"QUALITY";sourceId:string;files:File[];removeAttachmentIds?:string[]}){
   const removeIds=Array.from(new Set(removeAttachmentIds.map(String).filter(Boolean)));
   if(!files.length&&!removeIds.length)return {attachmentCount:0};
-  const runtime=await import("cloudflare:workers");
-  const FILES=(runtime.env as unknown as {FILES?:R2Bucket}).FILES;
+  const FILES=getStorageAdapter() as unknown as R2Bucket;
   if(!FILES)throw new Error("파일 저장소가 연결되지 않았습니다.");
   const now=Math.floor(Date.now()/1000),statements:any[]=[];
   if(removeIds.length){
@@ -39,6 +39,6 @@ export async function syncSourceAttachments(db:D1,context:RequestContext,{projec
 
 export async function removeSourceFiles(db:D1,context:RequestContext,sourceType:"ECR"|"QUALITY",sourceId:string){
   const rows=await db.prepare("SELECT file_key AS fileKey FROM workflow_source_attachments WHERE company_id=? AND source_type=? AND source_id=?").bind(context.companyId,sourceType,sourceId).all<{fileKey:string}>();
-  if((rows.results??[]).length){const runtime=await import("cloudflare:workers"),FILES=(runtime.env as unknown as {FILES?:R2Bucket}).FILES;if(FILES)for(const item of rows.results??[])await FILES.delete(item.fileKey)}
+  if((rows.results??[]).length){const FILES=getStorageAdapter() as unknown as R2Bucket;for(const item of rows.results??[])await FILES.delete(item.fileKey)}
   await db.prepare("DELETE FROM workflow_source_attachments WHERE company_id=? AND source_type=? AND source_id=?").bind(context.companyId,sourceType,sourceId).run();
 }
