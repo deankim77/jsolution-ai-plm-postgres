@@ -35,6 +35,18 @@ function ensureCompatImport(source, file) {
   return line + source;
 }
 
+function removeUnusedCloudflareRuntimeImport(source) {
+  const runtimeImport = /(?:const|let)\s+runtime\s*=\s*await\s+import\(["']cloudflare:workers["']\);?\s*/g;
+  const withoutRuntimeImport = source.replace(runtimeImport, "");
+  if (!/\bruntime\b/.test(withoutRuntimeImport)) source = withoutRuntimeImport;
+
+  const envDynamicImport = /(?:const|let)\s*\{\s*env\s*\}\s*=\s*await\s+import\(["']cloudflare:workers["']\);?\s*/g;
+  const withoutEnvImport = source.replace(envDynamicImport, "");
+  if (!/\benv\b/.test(withoutEnvImport)) source = withoutEnvImport;
+
+  return source;
+}
+
 for (const file of roots.flatMap((name) => walk(path.join(root, name)))) {
   if (!/\.(ts|tsx|js|jsx)$/.test(file)) continue;
   if (file.endsWith(path.join("db", "postgres-d1-compat.ts"))) continue;
@@ -53,7 +65,11 @@ for (const file of roots.flatMap((name) => walk(path.join(root, name)))) {
 
   source = ensureCompatImport(source, file);
 
-  // Remove the exact env-only Cloudflare import when DB was its only use.
+  // Remove Cloudflare imports only when the imported runtime/env symbol is no
+  // longer referenced after the PostgreSQL DB replacement. Other bindings such
+  // as R2 remain untouched.
+  source = removeUnusedCloudflareRuntimeImport(source);
+
   if (!/\benv\./.test(source)) {
     source = source.replace(/^import\s*\{\s*env\s*\}\s*from\s*["']cloudflare:workers["'];?\s*\r?\n/m, "");
   }
@@ -66,4 +82,4 @@ for (const file of roots.flatMap((name) => walk(path.join(root, name)))) {
 
 console.log(`Replaced legacy D1 DB bindings in ${changed.length} source files.`);
 for (const file of changed) console.log(`  ${file}`);
-console.log("Cloudflare/R2 imports are preserved when other env bindings remain.");
+console.log("Unused Cloudflare DB-runtime imports were removed; non-DB bindings are preserved.");
