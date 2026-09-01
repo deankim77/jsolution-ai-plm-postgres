@@ -1,13 +1,48 @@
-# J SOLUTION AI PMS 개발 필수 지침
+# J SOLUTION AI PLM 개발 필수 지침
 
-## 모든 작업 전에 반드시 먼저 확인
+## 최상위 Contract — 모든 작업 전에 반드시 확인
 
-V2 소스를 조회·분석·수정하기 전에 가장 먼저 `docs/V2-UI-STANDARD.md`를 끝까지 읽고 그 기준을 적용한다.
-이 확인을 생략한 채 화면별 CSS 값이나 임의 UI 기준을 추가하지 않는다.
+AI PLM 소스를 조회·분석·수정하기 전에 아래 문서를 이 순서로 확인하고 적용한다.
+
+1. `ARCHITECTURE.md`
+2. `docs/UI-CONTRACT.md`
+3. `docs/V2-UI-STANDARD.md`
+4. `docs/COMMON-COMPONENT-RULES.md`
+
+`ARCHITECTURE.md`와 `docs/UI-CONTRACT.md`는 **LOCKED Contract**다.
+기능 개발, 버그 수정, 리팩터링, DB 전환을 이유로 임의 변경하지 않는다.
+제품 책임자의 명시적 승인 없이 기술 스택, 데이터 접근 경계, UI Foundation을 변경하지 않는다.
+
+아키텍처/UI Contract 변경 승인이 있는 경우에도 **Contract 문서 → 자동 검사 → 구현** 순서로 변경한다. 구현부터 바꾸고 문서를 사후 수정하지 않는다.
+
+모든 완료 작업은 최소 다음 검사를 통과해야 한다.
+
+```text
+npm run check:architecture
+npm run check:v2-ui
+```
+
+UI/React 구조를 변경한 경우 다음도 통과해야 한다.
+
+```text
+npm run audit:react-dom
+```
+
+## 데이터 접근 절대 규칙
+
+- 공식 목표 DB는 **PostgreSQL**, ORM은 **Drizzle ORM**이다.
+- 신규 업무 데이터 접근은 `UI -> API -> Service -> Repository -> Drizzle -> PostgreSQL` 경계를 따른다.
+- UI Component에서 `db`, `drizzle-orm`, DB driver, `cloudflare:workers`, `env.DB`를 직접 사용하지 않는다.
+- UI Component에서 SQL을 직접 실행하지 않는다.
+- 신규 기능에 D1/SQLite 의존성을 추가하지 않는다.
+- PostgreSQL 전환 중 기존 D1/SQLite 코드는 임시 legacy로만 취급하며 신규 구조가 이를 확장하지 않는다.
+- DB Schema 변경은 Migration을 반드시 동반한다.
+- 실제 문서/도면/첨부파일 binary를 DB에 저장하지 않는다. DB에는 metadata/storage key만 저장한다.
+- Storage와 AI Provider는 Adapter/Service 계층으로 분리하여 특정 Vendor에 업무 로직을 직접 결합하지 않는다.
 
 ## React 구조 절대 규칙
 
-- React 화면의 기능 수정은 **원본 React 컴포넌트의 state/props/context와 API/DB**에서 처리한다.
+- React 화면의 기능 수정은 **원본 React 컴포넌트의 state/props/context와 API/Service**에서 처리한다.
 - 기능 구현을 위해 React가 소유한 DOM에 `document.createElement`, `appendChild`, `prepend`, `insertBefore`, `.remove()`, `removeChild`, `innerHTML` 등으로 노드를 직접 추가·삭제·교체하지 않는다.
 - `MutationObserver + querySelector + DOM mutation` 조합으로 기존 화면을 후처리하는 신규 bridge/enhancer/fix를 만들지 않는다.
 - 다른 컴포넌트의 버튼·행을 찾아 `.click()`하여 화면 상태나 업무 로직을 우회하지 않는다. 필요한 동작은 callback/action/context로 명시적으로 연결한다.
@@ -41,7 +76,7 @@ V2 소스를 조회·분석·수정하기 전에 가장 먼저 `docs/V2-UI-STAND
 - `12px` 미만의 신규 `font-size`를 사용하지 않는다. 단, **간트 막대 내부 진행률 숫자**만 전용 토큰 `--v2-font-size-gantt-progress: 10px`를 사용할 수 있다.
 - 화면별 숫자 직접 지정 대신 `app/ui-standard-tokens.css`의 `--v2-*` 토큰을 사용한다.
 - 좁은 레이아웃은 글씨를 줄여 해결하지 않는다. 열 너비, 말줄임, 줄바꿈, 가로 스크롤로 처리한다.
-- 위 간트 진행률 외의 예외가 필요하면 임의 적용하지 말고 사용자 확인 후 표준 문서와 토큰을 함께 변경한다.
+- 위 간트 진행률 외의 예외가 필요하면 임의 적용하지 말고 사용자 확인 후 Contract/표준 문서와 토큰을 함께 변경한다.
 - V2 UI 변경 후 반드시 `npm run check:v2-ui`를 실행하고 통과시킨다.
 
 ## 적용 범위
