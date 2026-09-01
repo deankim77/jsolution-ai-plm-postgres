@@ -1,11 +1,12 @@
+import { getLegacyDbCompat } from "../../../db/postgres-d1-compat";
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { getChatGPTUser } from "../../chatgpt-auth";
 import {contextErrorResponse,resolveRequestContext} from "../../../db/request-context";
 
 type D1={prepare:(sql:string)=>any};
-async function runtimeDb():Promise<D1>{const runtime=await import("cloudflare:workers");return runtime.env.DB as D1;}
+async function runtimeDb():Promise<D1>{return getLegacyDbCompat() as D1;}
 async function contextFor(request:Request,db:D1){const chatUser=await getChatGPTUser();return resolveRequestContext(request,db,{email:chatUser?.email});}
-async function ensure(db:D1){await db.prepare("CREATE TABLE IF NOT EXISTS user_work_state (user_id text NOT NULL,state_key text NOT NULL,value text NOT NULL,updated_at integer NOT NULL,PRIMARY KEY(user_id,state_key))").run();}
+async function ensure(_db:D1){return;}
 
 export async function GET(request:Request){
   const db=await runtimeDb();await ensure(db);

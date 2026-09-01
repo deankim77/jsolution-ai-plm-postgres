@@ -24,11 +24,9 @@ async function hasCurrentFoundation(db:RuntimeD1){
  * The checked-in Drizzle migration remains the source of truth. Healthy databases
  * take the cheap schema probe; the compatibility DDL only runs when something is missing.
  */
-export function ensureProjectDataFoundation(db: RuntimeD1) {
-  const key=db as object;
-  const existing=foundationReadyByDb.get(key);if(existing)return existing;
-  const ready=(async()=>{if(await hasCurrentFoundation(db))return;await ensureProjectDataFoundationImpl(db)})().catch(reason=>{foundationReadyByDb.delete(key);throw reason});
-  foundationReadyByDb.set(key,ready);return ready;
+export function ensureProjectDataFoundation(_db: RuntimeD1) {
+  // PostgreSQL schema is migration-owned. Runtime DDL is intentionally disabled.
+  return Promise.resolve();
 }
 
 async function ensureProjectDataFoundationImpl(db: RuntimeD1) {

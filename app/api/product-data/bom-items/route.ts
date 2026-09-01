@@ -1,8 +1,9 @@
+import { getLegacyDbCompat } from "../../../../db/postgres-d1-compat";
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import {contextErrorResponse,resolveRequestContext} from "../../../../db/request-context";
 
 type D1={prepare:(sql:string)=>any};
-async function runtimeDb():Promise<D1>{const runtime=await import("cloudflare:workers");return runtime.env.DB as D1;}
+async function runtimeDb():Promise<D1>{return getLegacyDbCompat() as D1;}
 const now=()=>Math.floor(Date.now()/1000);
 
 export async function POST(request:Request){

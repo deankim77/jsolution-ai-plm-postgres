@@ -1,10 +1,11 @@
+import { getLegacyDbCompat } from "../../../../../db/postgres-d1-compat";
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import {canManageProject,contextErrorResponse,requireProjectAccess,resolveRequestContext} from "../../../../../db/request-context";
 
 type D1={prepare:(sql:string)=>any;batch:(statements:any[])=>Promise<unknown>};
 const DECISIONS=new Set(["PASS","CONDITIONAL_PASS","REJECT","DEFER"]);
 const normalizeGateCode=(value:string)=>String(value||"").replace(/-(?:REVIEW|R)$/i,"");
-async function runtimeDb():Promise<D1>{const runtime=await import("cloudflare:workers");return runtime.env.DB as D1;}
+async function runtimeDb():Promise<D1>{return getLegacyDbCompat() as D1;}
 async function ensureTables(db:D1){
   await db.prepare(`CREATE TABLE IF NOT EXISTS project_gate_decisions (
     id TEXT PRIMARY KEY NOT NULL,project_id TEXT NOT NULL,gate_task_id TEXT NOT NULL,gate_code TEXT NOT NULL,

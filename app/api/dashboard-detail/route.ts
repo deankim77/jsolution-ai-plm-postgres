@@ -1,3 +1,4 @@
+import { getLegacyDbCompat } from "../../../db/postgres-d1-compat";
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import {getChatGPTUser} from "../../chatgpt-auth";
 import {contextErrorResponse,resolveRequestContext} from "../../../db/request-context";
@@ -6,7 +7,7 @@ import {listUnreadNotifications} from "../notifications/notification-service";
 type D1Statement={bind:(...values:unknown[])=>D1Statement;first:<T=any>()=>Promise<T|null>;all:<T=any>()=>Promise<{results:T[]}>;run:()=>Promise<unknown>};
 type D1={prepare:(sql:string)=>D1Statement};
 type CachedDashboard={expiresAt:number;data:any};
-async function runtimeDb():Promise<D1>{const runtime=await import("cloudflare:workers");return runtime.env.DB as unknown as D1;}
+async function runtimeDb():Promise<D1>{return getLegacyDbCompat() as unknown as D1;}
 const DAY=86_400_000;
 const DASHBOARD_CACHE_MS=20_000;
 const dashboardCache=new Map<string,CachedDashboard>();

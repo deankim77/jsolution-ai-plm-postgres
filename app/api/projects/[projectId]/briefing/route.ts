@@ -1,7 +1,8 @@
+import { getLegacyDbCompat } from "../../../../../db/postgres-d1-compat";
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import {contextErrorResponse,requireProjectAccess,resolveRequestContext} from "../../../../../db/request-context";
 type D1={prepare:(sql:string)=>any;batch:(statements:any[])=>Promise<unknown>};
-async function runtimeDb():Promise<D1>{const runtime=await import("cloudflare:workers");return runtime.env.DB as D1}
+async function runtimeDb():Promise<D1>{return getLegacyDbCompat() as D1}
 async function ensureTables(db:D1){await db.batch([
   db.prepare("CREATE TABLE IF NOT EXISTS task_actuals (id text PRIMARY KEY NOT NULL,project_id text NOT NULL,task_id text NOT NULL,user_id text NOT NULL,actual_date text NOT NULL,actual_hours real NOT NULL DEFAULT 0,progress integer NOT NULL DEFAULT 0,work_note text,completed integer NOT NULL DEFAULT 0,created_at integer NOT NULL,updated_at integer NOT NULL)"),
   db.prepare("CREATE TABLE IF NOT EXISTS project_baselines (id text PRIMARY KEY NOT NULL,project_id text NOT NULL,version integer NOT NULL,name text NOT NULL,captured_at integer NOT NULL,captured_by text,is_active integer DEFAULT 1 NOT NULL)"),

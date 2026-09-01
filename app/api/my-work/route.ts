@@ -1,3 +1,4 @@
+import { getLegacyDbCompat } from "../../../db/postgres-d1-compat";
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { getChatGPTUser } from "../../chatgpt-auth";
 import {contextErrorResponse,resolveRequestContext} from "../../../db/request-context";
@@ -10,7 +11,7 @@ type ProjectOption={id:string;code:string;name:string};
 const PAGE_SIZE=50;
 const MAX_PAGE_SIZE=100;
 
-async function runtimeDb():Promise<D1>{const runtime=await import("cloudflare:workers");return runtime.env.DB as unknown as D1;}
+async function runtimeDb():Promise<D1>{return getLegacyDbCompat() as unknown as D1;}
 
 const positiveInteger=(value:string|null,fallback:number)=>{
   const parsed=Number.parseInt(value||"",10);

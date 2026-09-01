@@ -1,8 +1,9 @@
+import { getLegacyDbCompat } from "../../../../db/postgres-d1-compat";
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import {contextErrorResponse,resolveRequestContext} from "../../../../db/request-context";
 
 type D1={prepare:(sql:string)=>any;batch:(statements:any[])=>Promise<unknown>};
-async function runtimeDb():Promise<D1>{const runtime=await import("cloudflare:workers");return runtime.env.DB as D1;}
+async function runtimeDb():Promise<D1>{return getLegacyDbCompat() as D1;}
 const now=()=>Math.floor(Date.now()/1000);
 
 async function requireLock(db:D1,companyId:string,userId:string,rootPartId:string){

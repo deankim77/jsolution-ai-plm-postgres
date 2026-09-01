@@ -1,3 +1,4 @@
+import { getLegacyDbCompat } from "../../../db/postgres-d1-compat";
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import {ensureProjectDataFoundation,type RuntimeD1} from "../../../db/project-data-foundation";
 import {defaultWorkflowTemplates,ensureWorkflowFoundation,normalizedSteps,type WorkflowStepDefinition} from "../../../db/workflow-foundation";
@@ -5,7 +6,7 @@ import type {RequestContext} from "../../../db/request-context";
 
 type Prepared={bind:(...values:unknown[])=>Prepared;first:<T=Record<string,unknown>>()=>Promise<T|null>;all:<T=Record<string,unknown>>()=>Promise<{results:T[]}>;run:()=>Promise<unknown>};
 export type D1={prepare:(sql:string)=>Prepared;batch:(statements:Prepared[])=>Promise<unknown>};
-export async function workflowDb():Promise<D1>{const runtime=await import("cloudflare:workers");const db=runtime.env.DB as unknown as D1;await ensureProjectDataFoundation(db as RuntimeD1);await ensureWorkflowFoundation(db as RuntimeD1);return db}
+export async function workflowDb():Promise<D1>{const db=getLegacyDbCompat() as unknown as D1;await ensureProjectDataFoundation(db as RuntimeD1);await ensureWorkflowFoundation(db as RuntimeD1);return db}
 export const parseJson=<T>(value:unknown,fallback:T):T=>{if(typeof value!=="string")return (value??fallback) as T;try{return JSON.parse(value) as T}catch{return fallback}};
 export const nowSeconds=()=>Math.floor(Date.now()/1000);
 export const isWorkflowManager=(context:RequestContext)=>context.systemRoles.some(role=>["SUPER_ADMIN","ADMIN","SYSTEM_ADMIN","PM"].includes(role));

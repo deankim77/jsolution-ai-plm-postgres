@@ -1,3 +1,4 @@
+import { getLegacyDbCompat } from "../../../../../db/postgres-d1-compat";
 import { ensureProjectDataFoundation, type RuntimeD1 } from "../../../../../db/project-data-foundation";
 import {canManageProject,contextErrorResponse,requireProjectAccess,resolveRequestContext} from "../../../../../db/request-context";
 
@@ -38,8 +39,7 @@ const cacheKeyFor=(companyId:string,projectId:string)=>`${companyId}:${projectId
 const invalidateWbsCache=(companyId:string,projectId:string)=>{const key=cacheKeyFor(companyId,projectId);wbsGeneration.set(key,(wbsGeneration.get(key)||0)+1);wbsCache.delete(key)};
 
 async function runtimeDb(): Promise<D1> {
-  const runtime = await import("cloudflare:workers");
-  return runtime.env.DB as D1;
+  return getLegacyDbCompat() as D1;
 }
 
 async function projectFor(db: D1, projectId: string,companyId:string) {

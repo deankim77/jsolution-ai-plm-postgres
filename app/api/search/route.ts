@@ -1,3 +1,4 @@
+import { getLegacyDbCompat } from "../../../db/postgres-d1-compat";
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import {ensureProjectDataFoundation,type RuntimeD1} from "../../../db/project-data-foundation";
 import {contextErrorResponse,resolveRequestContext} from "../../../db/request-context";
@@ -10,7 +11,7 @@ type SearchContext={companyId:string;userId:string};
 type SearchArgs={db:D1;context:SearchContext;like:string;compactLike:string;today:string;status:StatusIntent;severity:SeverityIntent;mine:boolean;actionRequired:boolean;top:boolean;subtype:string};
 type SearchGroup={kind:SearchKind;items:any[];reason?:string};
 
-async function runtimeDb():Promise<D1>{const runtime=await import("cloudflare:workers");return runtime.env.DB as D1;}
+async function runtimeDb():Promise<D1>{return getLegacyDbCompat() as D1;}
 const compact=(value:string)=>value.toLowerCase().replace(/[\s\-_.·]+/g,"");
 const sqlCompact=(expr:string)=>`replace(replace(replace(replace(replace(lower(${expr}),' ',''),'-',''),'_',''),'.',''),'·','')`;
 const textMatch=(expr:string)=>`(lower(${expr}) LIKE lower(?) OR ${sqlCompact(expr)} LIKE ?)`;

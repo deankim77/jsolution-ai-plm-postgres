@@ -1,8 +1,9 @@
+import { getLegacyDbCompat } from "../../../../../db/postgres-d1-compat";
 import {ensureProjectDataFoundation,type RuntimeD1} from "../../../../../db/project-data-foundation";
 import {canManageProject,contextErrorResponse,requireProjectAccess,resolveRequestContext} from "../../../../../db/request-context";
 
 type Update={id:string;plannedStart:string;plannedEnd:string;durationDays?:number};
-async function runtimeDb():Promise<RuntimeD1>{const runtime=await import("cloudflare:workers");return runtime.env.DB as RuntimeD1;}
+async function runtimeDb():Promise<RuntimeD1>{return getLegacyDbCompat() as RuntimeD1;}
 
 export async function PATCH(request:Request,{params}:{params:Promise<{projectId:string}>}){
   const {projectId}=await params;const db=await runtimeDb();await ensureProjectDataFoundation(db);

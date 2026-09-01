@@ -1,3 +1,4 @@
+import { getLegacyDbCompat } from "../../../../../db/postgres-d1-compat";
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import {canManageProject,contextErrorResponse,requireProjectAccess,resolveRequestContext} from "../../../../../db/request-context";
 type D1={prepare:(sql:string)=>any;batch:(statements:any[])=>Promise<unknown>};
@@ -5,7 +6,7 @@ type ProjectStatus="preparing"|"active"|"stopped"|"completed";
 type StatusAction="start"|"stop"|"resume"|"complete"|"prepare";
 type StatusInput={action?:StatusAction;force?:boolean;reason?:string};
 
-async function runtimeDb():Promise<D1>{const runtime=await import("cloudflare:workers");return runtime.env.DB as D1}
+async function runtimeDb():Promise<D1>{return getLegacyDbCompat() as D1}
 const nextStatus:Record<StatusAction,ProjectStatus>={start:"active",stop:"stopped",resume:"active",complete:"completed",prepare:"preparing"};
 const allowedFrom:Record<StatusAction,ProjectStatus[]>={start:["preparing"],stop:["active"],resume:["stopped"],complete:["active"],prepare:["active","stopped"]};
 

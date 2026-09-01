@@ -1,9 +1,10 @@
+import { getLegacyDbCompat } from "../../../db/postgres-d1-compat";
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import {contextErrorResponse,resolveRequestContext} from "../../../db/request-context";
 
 type D1Statement={bind:(...values:unknown[])=>D1Statement;all:<T=any>()=>Promise<{results:T[]}>;first:<T=any>()=>Promise<T|null>;run:()=>Promise<unknown>};
 type D1={prepare:(sql:string)=>D1Statement};
-async function runtimeDb():Promise<D1>{const runtime=await import("cloudflare:workers");return runtime.env.DB as unknown as D1;}
+async function runtimeDb():Promise<D1>{return getLegacyDbCompat() as unknown as D1;}
 const positiveInt=(value:string|null,fallback:number)=>{const parsed=Number.parseInt(value||"",10);return Number.isFinite(parsed)&&parsed>=0?parsed:fallback};
 let issueIndexesReady:Promise<void>|null=null;
 const ensureIssueIndexes=(db:D1)=>issueIndexesReady??=(Promise.all([

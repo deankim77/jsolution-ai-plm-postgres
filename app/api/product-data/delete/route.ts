@@ -1,8 +1,9 @@
+import { getLegacyDbCompat } from "../../../../db/postgres-d1-compat";
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import {contextErrorResponse,resolveRequestContext} from "../../../../db/request-context";
 
 type D1={prepare:(sql:string)=>any;batch:(statements:any[])=>Promise<unknown>};
-async function runtimeDb():Promise<D1>{const runtime=await import("cloudflare:workers");return runtime.env.DB as D1;}
+async function runtimeDb():Promise<D1>{return getLegacyDbCompat() as D1;}
 const isAdmin=(roles:string[])=>roles.some(role=>["SUPER_ADMIN","ADMIN","SYSTEM_ADMIN"].includes(role));
 
 async function getPart(db:D1,companyId:string,partId:string){return db.prepare("SELECT id,part_number AS partNumber,name,created_by AS createdBy FROM product_parts WHERE company_id=? AND id=?").bind(companyId,partId).first<any>();}

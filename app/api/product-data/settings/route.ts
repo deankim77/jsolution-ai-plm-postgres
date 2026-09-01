@@ -1,8 +1,9 @@
+import { getLegacyDbCompat } from "../../../../db/postgres-d1-compat";
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import {contextErrorResponse,resolveRequestContext} from "../../../../db/request-context";
 
 type D1={prepare:(sql:string)=>any;batch:(statements:any[])=>Promise<unknown>};
-async function runtimeDb():Promise<D1>{const runtime=await import("cloudflare:workers");return runtime.env.DB as D1;}
+async function runtimeDb():Promise<D1>{return getLegacyDbCompat() as D1;}
 const now=()=>Math.floor(Date.now()/1000);
 const DEFAULT_CATEGORIES=[["PURCHASED","구매품"],["MACHINED","가공품"],["INJECTION","사출품"],["SHEET_METAL","판금품"],["ELECTRICAL","전장품"],["MECHANICAL","기구품"],["RAW_MATERIAL","원자재"],["CONSUMABLE","소모품"],["OTHER","기타"]] as const;
 

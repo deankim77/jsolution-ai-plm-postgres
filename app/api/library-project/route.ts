@@ -1,8 +1,9 @@
+import { getLegacyDbCompat } from "../../../db/postgres-d1-compat";
 import {ensureProjectDataFoundation,type RuntimeD1} from "../../../db/project-data-foundation";
 import {contextErrorResponse,resolveRequestContext} from "../../../db/request-context";
 
 type D1=RuntimeD1;
-async function runtimeDb():Promise<D1>{const runtime=await import("cloudflare:workers");return runtime.env.DB as D1;}
+async function runtimeDb():Promise<D1>{return getLegacyDbCompat() as D1;}
 
 const LIBRARY_CODE="SYS-DOCUMENT-LIBRARY";
 const LIBRARY_NAME="공통 문서 라이브러리";

@@ -1,9 +1,10 @@
+import { getLegacyDbCompat } from "../../../db/postgres-d1-compat";
 import {ensureProjectDataFoundation,type RuntimeD1} from "../../../db/project-data-foundation";
 import {contextErrorResponse,resolveRequestContext} from "../../../db/request-context";
 import {ensureWorkflowFoundation} from "../../../db/workflow-foundation";
 
 type D1=RuntimeD1;
-async function runtimeDb():Promise<D1>{const runtime=await import("cloudflare:workers");return runtime.env.DB as D1;}
+async function runtimeDb():Promise<D1>{return getLegacyDbCompat() as D1;}
 
 let compatibilityReady:Promise<void>|null=null;
 async function ensureCompatibility(db:D1){

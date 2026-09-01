@@ -1,3 +1,4 @@
+import { getLegacyDbCompat } from "../../../../db/postgres-d1-compat";
 import {ensureProjectDataFoundation,type RuntimeD1} from "../../../../db/project-data-foundation";
 import {contextErrorResponse,resolveRequestContext} from "../../../../db/request-context";
 
@@ -14,7 +15,7 @@ const DEFAULTS=[
   ["OTHER","기타"],
 ] as const;
 
-async function runtimeDb():Promise<D1>{const runtime=await import("cloudflare:workers");return runtime.env.DB as D1;}
+async function runtimeDb():Promise<D1>{return getLegacyDbCompat() as D1;}
 
 async function ensureDrawingTypes(db:D1,companyId:string){
   const now=Math.floor(Date.now()/1000);

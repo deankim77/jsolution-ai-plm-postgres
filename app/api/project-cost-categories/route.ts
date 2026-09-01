@@ -1,3 +1,4 @@
+import { getLegacyDbCompat } from "../../../db/postgres-d1-compat";
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import {contextErrorResponse,resolveRequestContext} from "../../../db/request-context";
 
@@ -5,7 +6,7 @@ type D1={prepare:(sql:string)=>any;batch:(statements:any[])=>Promise<unknown>};
 const ADMIN_ROLES=new Set(["SUPER_ADMIN","ADMIN","SYSTEM_ADMIN"]);
 const GROUPS=new Set(["MATERIAL","EXPENSE","OUTSOURCE","OTHER"]);
 const now=()=>Math.floor(Date.now()/1000);
-async function runtimeDb():Promise<D1>{const runtime=await import("cloudflare:workers");return runtime.env.DB as D1;}
+async function runtimeDb():Promise<D1>{return getLegacyDbCompat() as D1;}
 async function ensureTable(db:D1){await db.batch([
   db.prepare(`CREATE TABLE IF NOT EXISTS project_cost_categories (id TEXT PRIMARY KEY NOT NULL,company_id TEXT NOT NULL,code TEXT NOT NULL,group_code TEXT NOT NULL,name TEXT NOT NULL,source_type TEXT NOT NULL DEFAULT 'MANUAL',enabled INTEGER NOT NULL DEFAULT 1,sort_order INTEGER NOT NULL DEFAULT 0,created_at INTEGER NOT NULL,updated_at INTEGER NOT NULL)`),
   db.prepare("CREATE UNIQUE INDEX IF NOT EXISTS project_cost_categories_company_code_uq ON project_cost_categories(company_id,code)"),

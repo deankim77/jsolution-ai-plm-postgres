@@ -1,8 +1,9 @@
+import { getLegacyDbCompat } from "../../../db/postgres-d1-compat";
 import {ensureProjectDataFoundation,type RuntimeD1} from "../../../db/project-data-foundation";
 import {contextErrorResponse,resolveRequestContext} from "../../../db/request-context";
 
 type D1=RuntimeD1;
-async function dbRuntime(){const runtime=await import("cloudflare:workers");return runtime.env.DB as D1;}
+async function dbRuntime(){return getLegacyDbCompat() as D1;}
 
 const STANDARDS=[
   ["P01_INIT_REPORT","01 프로젝트·기획 > 프로젝트 관리 > 착수보고서"],["P01_EXEC_PLAN","01 프로젝트·기획 > 프로젝트 관리 > 수행계획서"],["P01_TFT_ORG","01 프로젝트·기획 > 프로젝트 관리 > TFT 조직도"],["P01_REQUIRE_TRACE","01 프로젝트·기획 > 요구사항 관리 > 요구사항 추적표"],["P01_REQUIRE_ANALYSIS","01 프로젝트·기획 > 요구사항 관리 > AS-IS(요구사항) 분석서"],["P01_MEETING","01 프로젝트·기획 > 회의·보고 > 회의록"],["P01_WEEKLY_REPORT","01 프로젝트·기획 > 회의·보고 > 주간보고서"],["P01_FINAL_REPORT","01 프로젝트·기획 > 회의·보고 > 완료보고서"],

@@ -1,3 +1,4 @@
+import { getLegacyDbCompat } from "../../../../db/postgres-d1-compat";
 import {ensureProjectDataFoundation,type RuntimeD1} from "../../../../db/project-data-foundation";
 import {contextErrorResponse,resolveRequestContext,type RequestContext} from "../../../../db/request-context";
 
@@ -30,7 +31,7 @@ const DEFAULT_PARTNERS=[
   ["NEXTR","넥스트로보틱스","CUSTOMER","한지호","rnd@nextrobotics.example","042-860-8808","Next Robotics","대한민국","로봇·자동화","대전광역시 유성구"],
   ["SHINSUNG","신성에너지","OTHER","오수빈","business@shinsung-energy.example","061-350-9909","Shinsung Energy","대한민국","에너지","전라남도 나주시"],
 ] as const;
-async function runtimeDb():Promise<D1>{const runtime=await import("cloudflare:workers");return runtime.env.DB as D1;}
+async function runtimeDb():Promise<D1>{return getLegacyDbCompat() as D1;}
 async function ensureUserAvatarColumn(db:D1){const columns=await db.prepare("PRAGMA table_info(users)").all();if(!(columns.results??[]).some((column:any)=>column.name==="avatar_key"))await db.prepare("ALTER TABLE users ADD COLUMN avatar_key text DEFAULT 'avatar-01'").run();}
 
 async function ensureSystemFoundation(db:D1,companyId:string){

@@ -1,37 +1,11 @@
+import { getLegacyDbCompat } from "../../../db/postgres-d1-compat";
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import {contextErrorResponse,resolveRequestContext} from "../../../db/request-context";
 
 type D1={prepare:(sql:string)=>any;batch:(statements:any[])=>Promise<unknown>};
-async function runtimeDb():Promise<D1>{const runtime=await import("cloudflare:workers");return runtime.env.DB as D1;}
+async function runtimeDb():Promise<D1>{return getLegacyDbCompat() as D1;}
 
-async function ensureTables(db:D1){
-  await db.batch([
-    db.prepare(`CREATE TABLE IF NOT EXISTS product_parts (
-      id TEXT PRIMARY KEY NOT NULL,company_id TEXT NOT NULL,part_number TEXT NOT NULL,name TEXT NOT NULL,
-      part_type TEXT NOT NULL DEFAULT 'PART',spec TEXT,unit TEXT NOT NULL DEFAULT 'EA',revision TEXT NOT NULL DEFAULT 'A',
-      status TEXT NOT NULL DEFAULT 'active',standard_cost REAL NOT NULL DEFAULT 0,created_by TEXT,created_at INTEGER NOT NULL,updated_at INTEGER NOT NULL
-    )`),
-    db.prepare("CREATE UNIQUE INDEX IF NOT EXISTS product_parts_company_number_uq ON product_parts(company_id,part_number)"),
-    db.prepare(`CREATE TABLE IF NOT EXISTS product_bom_items (
-      id TEXT PRIMARY KEY NOT NULL,company_id TEXT NOT NULL,parent_part_id TEXT NOT NULL,child_part_id TEXT NOT NULL,
-      quantity REAL NOT NULL DEFAULT 1,unit TEXT NOT NULL DEFAULT 'EA',sort_order INTEGER NOT NULL DEFAULT 0,note TEXT,created_at INTEGER NOT NULL,updated_at INTEGER NOT NULL
-    )`),
-    db.prepare("CREATE UNIQUE INDEX IF NOT EXISTS product_bom_parent_child_uq ON product_bom_items(company_id,parent_part_id,child_part_id)"),
-    db.prepare(`CREATE TABLE IF NOT EXISTS bom_edit_locks (
-      id TEXT PRIMARY KEY NOT NULL,company_id TEXT NOT NULL,root_part_id TEXT NOT NULL,locked_by TEXT NOT NULL,locked_at INTEGER NOT NULL,updated_at INTEGER NOT NULL
-    )`),
-    db.prepare("CREATE UNIQUE INDEX IF NOT EXISTS bom_edit_locks_company_root_uq ON bom_edit_locks(company_id,root_part_id)"),
-    db.prepare(`CREATE TABLE IF NOT EXISTS part_number_history (
-      id TEXT PRIMARY KEY NOT NULL,company_id TEXT NOT NULL,part_id TEXT NOT NULL,part_number TEXT NOT NULL,rule_code TEXT NOT NULL,created_by TEXT,created_at INTEGER NOT NULL
-    )`),
-    db.prepare(`CREATE TABLE IF NOT EXISTS cost_sheets (
-      id TEXT PRIMARY KEY NOT NULL,company_id TEXT NOT NULL,part_id TEXT NOT NULL,version INTEGER NOT NULL DEFAULT 1,
-      material_cost REAL NOT NULL DEFAULT 0,labor_cost REAL NOT NULL DEFAULT 0,overhead_cost REAL NOT NULL DEFAULT 0,total_cost REAL NOT NULL DEFAULT 0,
-      note TEXT,status TEXT NOT NULL DEFAULT 'draft',created_by TEXT,created_at INTEGER NOT NULL,updated_at INTEGER NOT NULL
-    )`),
-    db.prepare("CREATE UNIQUE INDEX IF NOT EXISTS cost_sheets_part_version_uq ON cost_sheets(company_id,part_id,version)"),
-  ]);
-}
+async function ensureTables(_db:D1){return;}
 
 const now=()=>Math.floor(Date.now()/1000);
 const codeForType=(value:string)=>({PRODUCT:"PRD",TOP_ITEM:"PRD",ASSEMBLY:"ASM",SUB_ASSEMBLY:"ASM",FABRIC:"FAB",FOAM:"FRM",FRAME:"MET",TRIM:"TRM",PART:"PRT"} as Record<string,string>)[value]||"PRT";

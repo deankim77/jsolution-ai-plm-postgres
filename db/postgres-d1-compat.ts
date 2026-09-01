@@ -68,6 +68,13 @@ function translateSql(input: string) {
   }
 
   sql = sql.replace(/json_extract\(([^,]+),\s*'\$\.([A-Za-z0-9_]+)'\)/gi, "($1::jsonb ->> '$2')");
+
+  // GROUP_CONCAT compatibility: SQLite -> PostgreSQL string_agg.
+  sql = sql.replace(/GROUP_CONCAT\(\s*DISTINCT\s+([^)]+)\)/gi, "string_agg(DISTINCT ($1)::text, ',')");
+  sql = sql.replace(/GROUP_CONCAT\(\s*([^)]+)\)/gi, "string_agg(($1)::text, ',')");
+
+  // SQLite date('now') compatibility. Legacy date fields are YYYY-MM-DD text.
+  sql = sql.replace(/date\(\s*'now'\s*\)/gi, "CURRENT_DATE::text");
   return sql;
 }
 

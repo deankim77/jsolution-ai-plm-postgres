@@ -1,10 +1,10 @@
+import { getLegacyDbCompat } from "../../../../../db/postgres-d1-compat";
 import {canManageProject,contextErrorResponse,requireProjectAccess,resolveRequestContext} from "../../../../../db/request-context";
 /* eslint-disable @typescript-eslint/no-explicit-any */
 type D1={prepare:(sql:string)=>any;batch:(statements:any[])=>Promise<unknown>};
 
 async function runtimeDb():Promise<D1>{
-  const runtime=await import("cloudflare:workers");
-  return runtime.env.DB as D1;
+  return getLegacyDbCompat() as D1;
 }
 
 const normalize=(value:string)=>value.trim().toLowerCase();

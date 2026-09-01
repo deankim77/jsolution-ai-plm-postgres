@@ -1,8 +1,9 @@
+import { getLegacyDbCompat } from "../../../../db/postgres-d1-compat";
 import {ensureProjectDataFoundation,type RuntimeD1} from "../../../../db/project-data-foundation";
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import {contextErrorResponse,resolveRequestContext} from "../../../../db/request-context";
 
-async function runtimeDb():Promise<RuntimeD1>{const runtime=await import("cloudflare:workers");return runtime.env.DB as RuntimeD1;}
+async function runtimeDb():Promise<RuntimeD1>{return getLegacyDbCompat() as RuntimeD1;}
 async function ensure(db:RuntimeD1){await ensureProjectDataFoundation(db);await db.batch([db.prepare("CREATE TABLE IF NOT EXISTS system_settings (company_id text NOT NULL,setting_key text NOT NULL,value text NOT NULL,updated_by text,updated_at integer NOT NULL,PRIMARY KEY(company_id,setting_key))"),db.prepare("CREATE INDEX IF NOT EXISTS audit_logs_company_created_idx ON audit_logs(company_id,created_at DESC)")]);}
 const defaults:Record<string,unknown>={NOTIFICATION_POLICY:{delayedTask:true,approval:true,deliverable:true,issueSeverity:"high",dailyDigest:false,digestHour:"09:00"},AI_GOVERNANCE:{enabled:true,provider:"OPENAI",model:"configured-by-server",requireEvidence:true,requireApproval:true,allowOfficialDataWrite:false},FILE_INTEGRATION:{provider:"LOCAL",googleDriveEnabled:false,sharePointEnabled:false,conversionEnabled:true,maxUploadMb:100}};
 

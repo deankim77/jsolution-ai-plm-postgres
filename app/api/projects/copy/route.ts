@@ -1,9 +1,10 @@
+import { getLegacyDbCompat } from "../../../../db/postgres-d1-compat";
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import {ensureProjectDataFoundation,type RuntimeD1} from "../../../../db/project-data-foundation";
 import {contextErrorResponse,resolveRequestContext} from "../../../../db/request-context";
 
 type D1=RuntimeD1;
-async function runtimeDb():Promise<D1>{const runtime=await import("cloudflare:workers");return runtime.env.DB as D1;}
+async function runtimeDb():Promise<D1>{return getLegacyDbCompat() as D1;}
 const shiftDate=(value:string|undefined,sourceStart:string,targetStart:string)=>{if(!value)return null;const offset=Math.round((Date.parse(`${value}T00:00:00Z`)-Date.parse(`${sourceStart}T00:00:00Z`))/86_400_000);const target=new Date(`${targetStart}T00:00:00Z`);target.setUTCDate(target.getUTCDate()+offset);return target.toISOString().slice(0,10)};
 async function nextProjectCode(db:D1,companyId:string){
   const year=new Date().getUTCFullYear();

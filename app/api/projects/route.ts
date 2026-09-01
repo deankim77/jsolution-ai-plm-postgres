@@ -1,3 +1,4 @@
+import { getLegacyDbCompat } from "../../../db/postgres-d1-compat";
 import { ensureProjectDataFoundation, type RuntimeD1 } from "../../../db/project-data-foundation";
 import {canManageProject,contextErrorResponse,requireProjectAccess,resolveRequestContext} from "../../../db/request-context";
 
@@ -30,10 +31,9 @@ const projectListCache=new Map<string,ProjectListCache>();
 const projectListInflight=new Map<string,Promise<{projects:unknown[]}>>();
 const masterLinksReadyByDb=new WeakMap<object,Promise<void>>();
 async function runtimeDb():Promise<D1> {
-  const runtime = await import("cloudflare:workers");
-  return runtime.env.DB as D1;
+  return getLegacyDbCompat() as D1;
 }
-function ensureProjectMasterLinks(db:D1){const key=db as object,existing=masterLinksReadyByDb.get(key);if(existing)return existing;const ready=(async()=>{await db.batch([db.prepare(`CREATE TABLE IF NOT EXISTS partners (id text PRIMARY KEY NOT NULL,company_id text NOT NULL,code text NOT NULL,name text NOT NULL,category text,contact_name text,email text,phone text,status text DEFAULT 'active' NOT NULL,created_at integer NOT NULL,updated_at integer NOT NULL)`),db.prepare(`CREATE TABLE IF NOT EXISTS project_types (id text PRIMARY KEY NOT NULL,company_id text NOT NULL,code text NOT NULL,name text NOT NULL,description text,status text DEFAULT 'active' NOT NULL,created_at integer NOT NULL,updated_at integer NOT NULL)`),db.prepare(`CREATE TABLE IF NOT EXISTS project_profiles (project_id text PRIMARY KEY NOT NULL,description text,reference_code text,visibility text DEFAULT 'company' NOT NULL,updated_at integer NOT NULL,FOREIGN KEY(project_id) REFERENCES projects(id) ON DELETE CASCADE)`),db.prepare(`CREATE TABLE IF NOT EXISTS project_shares (project_id text NOT NULL,organization_id text NOT NULL,created_at integer NOT NULL,PRIMARY KEY(project_id,organization_id))`)]);try{await db.prepare("ALTER TABLE projects ADD COLUMN partner_id text").run();}catch{}try{await db.prepare("ALTER TABLE projects ADD COLUMN project_type_id text").run();}catch{}})().catch(reason=>{masterLinksReadyByDb.delete(key);throw reason});masterLinksReadyByDb.set(key,ready);return ready}
+function ensureProjectMasterLinks(_db:D1){return Promise.resolve()}
 const invalidateProjectList=(companyId:string)=>{projectListCache.delete(companyId)};
 async function nextProjectCode(db:D1,companyId:string){
   const year=new Date().getUTCFullYear();
@@ -48,7 +48,7 @@ async function readProjects(db:D1,companyId:string){
             p.start_date AS startDate, p.end_date AS endDate, p.status,p.updated_at AS updatedAt,
             tv.version AS templateVersion,
             COALESCE(t.name, json_extract(p.template_snapshot, '$.templateName'), '연결 정보 확인 필요') AS templateName,
-            COUNT(pm.user_id) AS memberCount,
+            (SELECT COUNT(*) FROM project_members pmc WHERE pmc.project_id=p.id) AS memberCount,
             COALESCE((SELECT GROUP_CONCAT(DISTINCT u.name) FROM project_members pm2 JOIN users u ON u.id=pm2.user_id WHERE pm2.project_id=p.id AND pm2.project_role='PM'),'') AS pmNamesText,
             COALESCE((SELECT GROUP_CONCAT(DISTINCT u.name) FROM wbs_tasks wt JOIN users u ON u.id=wt.assignee_user_id WHERE wt.project_id=p.id AND wt.assignee_user_id IS NOT NULL),'') AS assigneeNamesText,
             COALESCE((SELECT GROUP_CONCAT(ps.organization_id) FROM project_shares ps WHERE ps.project_id=p.id),'') AS sharedOrganizationIdsText
@@ -58,9 +58,7 @@ async function readProjects(db:D1,companyId:string){
        LEFT JOIN partners partner ON partner.id=p.partner_id
        LEFT JOIN project_types pt ON pt.id=p.project_type_id
        LEFT JOIN project_profiles profile ON profile.project_id=p.id
-       LEFT JOIN project_members pm ON pm.project_id = p.id
       WHERE p.company_id = ? AND p.code <> ?
-      GROUP BY p.id
       ORDER BY p.created_at DESC`
   ).bind(companyId,SYSTEM_LIBRARY_CODE).all();
   const projects=(result.results??[]).map((row:unknown)=>{const value=row as Record<string,unknown>;const split=(input:unknown)=>String(input||"").split(",").map(item=>item.trim()).filter(Boolean);const {pmNamesText,assigneeNamesText,sharedOrganizationIdsText,...project}=value;return {...project,pmNames:split(pmNamesText),assigneeNames:split(assigneeNamesText),sharedOrganizationIds:split(sharedOrganizationIdsText)}});

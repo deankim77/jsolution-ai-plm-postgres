@@ -1,3 +1,4 @@
+import { getLegacyDbCompat } from "../../../db/postgres-d1-compat";
 import { ensureProjectDataFoundation, type RuntimeD1 } from "../../../db/project-data-foundation";
 import {contextErrorResponse,resolveRequestContext} from "../../../db/request-context";
 
@@ -41,8 +42,7 @@ function parseDefinition(value: unknown): Partial<TemplateDefinition> & {wbsCoun
 }
 
 async function runtimeDb():Promise<D1> {
-  const runtime = await import("cloudflare:workers");
-  return runtime.env.DB as D1;
+  return getLegacyDbCompat() as D1;
 }
 
 async function ensureFoundation(db:D1) {

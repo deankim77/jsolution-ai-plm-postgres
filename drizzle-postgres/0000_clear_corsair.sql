@@ -6,9 +6,9 @@ CREATE TABLE "ai_conversations" (
 	"source" text NOT NULL,
 	"context_type" text NOT NULL,
 	"context_title" text NOT NULL,
-	"context_items" jsonb NOT NULL,
-	"created_at" timestamp with time zone NOT NULL,
-	"updated_at" timestamp with time zone NOT NULL
+	"context_items" text NOT NULL,
+	"created_at" integer NOT NULL,
+	"updated_at" integer NOT NULL
 );
 --> statement-breakpoint
 CREATE TABLE "ai_messages" (
@@ -16,8 +16,8 @@ CREATE TABLE "ai_messages" (
 	"conversation_id" text NOT NULL,
 	"role" text NOT NULL,
 	"content" text NOT NULL,
-	"citations" jsonb,
-	"created_at" timestamp with time zone NOT NULL
+	"citations" text,
+	"created_at" integer NOT NULL
 );
 --> statement-breakpoint
 CREATE TABLE "audit_logs" (
@@ -27,8 +27,8 @@ CREATE TABLE "audit_logs" (
 	"action" text NOT NULL,
 	"entity_type" text NOT NULL,
 	"entity_id" text NOT NULL,
-	"detail" jsonb,
-	"created_at" timestamp with time zone NOT NULL
+	"detail" text,
+	"created_at" integer NOT NULL
 );
 --> statement-breakpoint
 CREATE TABLE "calendar_holidays" (
@@ -36,8 +36,8 @@ CREATE TABLE "calendar_holidays" (
 	"calendar_id" text NOT NULL,
 	"holiday_date" text NOT NULL,
 	"name" text NOT NULL,
-	"created_at" timestamp with time zone NOT NULL,
-	"updated_at" timestamp with time zone NOT NULL
+	"created_at" integer NOT NULL,
+	"updated_at" integer NOT NULL
 );
 --> statement-breakpoint
 CREATE TABLE "common_codes" (
@@ -48,9 +48,9 @@ CREATE TABLE "common_codes" (
 	"label" text NOT NULL,
 	"version" integer DEFAULT 1 NOT NULL,
 	"sort_order" integer DEFAULT 0 NOT NULL,
-	"enabled" boolean DEFAULT true NOT NULL,
-	"created_at" timestamp with time zone NOT NULL,
-	"updated_at" timestamp with time zone NOT NULL
+	"enabled" integer DEFAULT 1 NOT NULL,
+	"created_at" integer NOT NULL,
+	"updated_at" integer NOT NULL
 );
 --> statement-breakpoint
 CREATE TABLE "companies" (
@@ -58,8 +58,8 @@ CREATE TABLE "companies" (
 	"name" text NOT NULL,
 	"code" text NOT NULL,
 	"status" text DEFAULT 'active' NOT NULL,
-	"created_at" timestamp with time zone NOT NULL,
-	"updated_at" timestamp with time zone NOT NULL
+	"created_at" integer NOT NULL,
+	"updated_at" integer NOT NULL
 );
 --> statement-breakpoint
 CREATE TABLE "deliverables" (
@@ -68,12 +68,12 @@ CREATE TABLE "deliverables" (
 	"task_id" text,
 	"name" text NOT NULL,
 	"category" text,
-	"required" boolean DEFAULT true NOT NULL,
+	"required" integer DEFAULT 1 NOT NULL,
 	"status" text DEFAULT 'planned' NOT NULL,
 	"file_key" text,
 	"version" text,
-	"created_at" timestamp with time zone NOT NULL,
-	"updated_at" timestamp with time zone NOT NULL
+	"created_at" integer NOT NULL,
+	"updated_at" integer NOT NULL
 );
 --> statement-breakpoint
 CREATE TABLE "design_change_requests" (
@@ -90,11 +90,11 @@ CREATE TABLE "design_change_requests" (
 	"impact_content" text,
 	"priority" text DEFAULT 'normal' NOT NULL,
 	"requester_user_id" text NOT NULL,
-	"requested_at" timestamp with time zone NOT NULL,
+	"requested_at" integer NOT NULL,
 	"workflow_id" text,
 	"status" text DEFAULT 'draft' NOT NULL,
-	"created_at" timestamp with time zone NOT NULL,
-	"updated_at" timestamp with time zone NOT NULL
+	"created_at" integer NOT NULL,
+	"updated_at" integer NOT NULL
 );
 --> statement-breakpoint
 CREATE TABLE "organizations" (
@@ -104,8 +104,8 @@ CREATE TABLE "organizations" (
 	"name" text NOT NULL,
 	"code" text NOT NULL,
 	"sort_order" integer DEFAULT 0 NOT NULL,
-	"created_at" timestamp with time zone NOT NULL,
-	"updated_at" timestamp with time zone NOT NULL
+	"created_at" integer NOT NULL,
+	"updated_at" integer NOT NULL
 );
 --> statement-breakpoint
 CREATE TABLE "partner_profiles" (
@@ -119,7 +119,7 @@ CREATE TABLE "partner_profiles" (
 	"main_phone" text,
 	"extra" text,
 	"note" text,
-	"updated_at" timestamp with time zone NOT NULL
+	"updated_at" integer NOT NULL
 );
 --> statement-breakpoint
 CREATE TABLE "partners" (
@@ -132,8 +132,8 @@ CREATE TABLE "partners" (
 	"email" text,
 	"phone" text,
 	"status" text DEFAULT 'active' NOT NULL,
-	"created_at" timestamp with time zone NOT NULL,
-	"updated_at" timestamp with time zone NOT NULL
+	"created_at" integer NOT NULL,
+	"updated_at" integer NOT NULL
 );
 --> statement-breakpoint
 CREATE TABLE "project_baseline_tasks" (
@@ -153,9 +153,9 @@ CREATE TABLE "project_baselines" (
 	"project_id" text NOT NULL,
 	"version" integer NOT NULL,
 	"name" text NOT NULL,
-	"captured_at" timestamp with time zone NOT NULL,
+	"captured_at" integer NOT NULL,
 	"captured_by" text,
-	"is_active" boolean DEFAULT true NOT NULL
+	"is_active" integer DEFAULT 1 NOT NULL
 );
 --> statement-breakpoint
 CREATE TABLE "project_documents" (
@@ -168,8 +168,8 @@ CREATE TABLE "project_documents" (
 	"version" text,
 	"status" text DEFAULT 'draft' NOT NULL,
 	"created_by" text,
-	"created_at" timestamp with time zone NOT NULL,
-	"updated_at" timestamp with time zone NOT NULL
+	"created_at" integer NOT NULL,
+	"updated_at" integer NOT NULL
 );
 --> statement-breakpoint
 CREATE TABLE "project_gate_decisions" (
@@ -180,7 +180,7 @@ CREATE TABLE "project_gate_decisions" (
 	"decision" text NOT NULL,
 	"note" text,
 	"decided_by" text NOT NULL,
-	"decided_at" timestamp with time zone NOT NULL
+	"decided_at" integer NOT NULL
 );
 --> statement-breakpoint
 CREATE TABLE "project_issues" (
@@ -194,27 +194,27 @@ CREATE TABLE "project_issues" (
 	"status" text DEFAULT 'open' NOT NULL,
 	"owner_user_id" text,
 	"due_date" text,
-	"created_at" timestamp with time zone NOT NULL,
-	"updated_at" timestamp with time zone NOT NULL
+	"created_at" integer NOT NULL,
+	"updated_at" integer NOT NULL
 );
 --> statement-breakpoint
 CREATE TABLE "project_meetings" (
 	"id" text PRIMARY KEY NOT NULL,
 	"project_id" text NOT NULL,
 	"title" text NOT NULL,
-	"meeting_at" timestamp with time zone NOT NULL,
+	"meeting_at" integer NOT NULL,
 	"minutes" text,
 	"created_by" text,
-	"created_at" timestamp with time zone NOT NULL,
-	"updated_at" timestamp with time zone NOT NULL
+	"created_at" integer NOT NULL,
+	"updated_at" integer NOT NULL
 );
 --> statement-breakpoint
 CREATE TABLE "project_members" (
 	"project_id" text NOT NULL,
 	"user_id" text NOT NULL,
 	"project_role" text NOT NULL,
-	"created_at" timestamp with time zone NOT NULL,
-	"updated_at" timestamp with time zone NOT NULL,
+	"created_at" integer NOT NULL,
+	"updated_at" integer NOT NULL,
 	CONSTRAINT "project_members_project_id_user_id_pk" PRIMARY KEY("project_id","user_id")
 );
 --> statement-breakpoint
@@ -223,7 +223,7 @@ CREATE TABLE "project_profiles" (
 	"description" text,
 	"reference_code" text,
 	"visibility" text DEFAULT 'company' NOT NULL,
-	"updated_at" timestamp with time zone NOT NULL
+	"updated_at" integer NOT NULL
 );
 --> statement-breakpoint
 CREATE TABLE "project_role_catalog" (
@@ -232,11 +232,11 @@ CREATE TABLE "project_role_catalog" (
 	"code" text NOT NULL,
 	"name" text NOT NULL,
 	"group_name" text NOT NULL,
-	"required" boolean DEFAULT false NOT NULL,
-	"enabled" boolean DEFAULT true NOT NULL,
+	"required" integer DEFAULT 0 NOT NULL,
+	"enabled" integer DEFAULT 1 NOT NULL,
 	"sort_order" integer DEFAULT 0 NOT NULL,
-	"created_at" timestamp with time zone NOT NULL,
-	"updated_at" timestamp with time zone NOT NULL
+	"created_at" integer NOT NULL,
+	"updated_at" integer NOT NULL
 );
 --> statement-breakpoint
 CREATE TABLE "project_roles" (
@@ -245,14 +245,14 @@ CREATE TABLE "project_roles" (
 	"code" text NOT NULL,
 	"name" text NOT NULL,
 	"sort_order" integer DEFAULT 0 NOT NULL,
-	"created_at" timestamp with time zone NOT NULL,
-	"updated_at" timestamp with time zone NOT NULL
+	"created_at" integer NOT NULL,
+	"updated_at" integer NOT NULL
 );
 --> statement-breakpoint
 CREATE TABLE "project_shares" (
 	"project_id" text NOT NULL,
 	"organization_id" text NOT NULL,
-	"created_at" timestamp with time zone NOT NULL,
+	"created_at" integer NOT NULL,
 	CONSTRAINT "project_shares_project_id_organization_id_pk" PRIMARY KEY("project_id","organization_id")
 );
 --> statement-breakpoint
@@ -263,8 +263,8 @@ CREATE TABLE "project_types" (
 	"name" text NOT NULL,
 	"description" text,
 	"status" text DEFAULT 'active' NOT NULL,
-	"created_at" timestamp with time zone NOT NULL,
-	"updated_at" timestamp with time zone NOT NULL
+	"created_at" integer NOT NULL,
+	"updated_at" integer NOT NULL
 );
 --> statement-breakpoint
 CREATE TABLE "projects" (
@@ -279,9 +279,9 @@ CREATE TABLE "projects" (
 	"start_date" text NOT NULL,
 	"end_date" text NOT NULL,
 	"status" text DEFAULT 'preparing' NOT NULL,
-	"template_snapshot" jsonb NOT NULL,
-	"created_at" timestamp with time zone NOT NULL,
-	"updated_at" timestamp with time zone NOT NULL
+	"template_snapshot" text NOT NULL,
+	"created_at" integer NOT NULL,
+	"updated_at" integer NOT NULL
 );
 --> statement-breakpoint
 CREATE TABLE "quality_cases" (
@@ -301,8 +301,8 @@ CREATE TABLE "quality_cases" (
 	"owner_user_id" text,
 	"workflow_id" text,
 	"status" text DEFAULT 'draft' NOT NULL,
-	"created_at" timestamp with time zone NOT NULL,
-	"updated_at" timestamp with time zone NOT NULL
+	"created_at" integer NOT NULL,
+	"updated_at" integer NOT NULL
 );
 --> statement-breakpoint
 CREATE TABLE "roles" (
@@ -311,9 +311,9 @@ CREATE TABLE "roles" (
 	"code" text NOT NULL,
 	"name" text NOT NULL,
 	"scope" text NOT NULL,
-	"permissions" jsonb NOT NULL,
-	"created_at" timestamp with time zone NOT NULL,
-	"updated_at" timestamp with time zone NOT NULL
+	"permissions" text NOT NULL,
+	"created_at" integer NOT NULL,
+	"updated_at" integer NOT NULL
 );
 --> statement-breakpoint
 CREATE TABLE "saved_filters" (
@@ -322,21 +322,21 @@ CREATE TABLE "saved_filters" (
 	"user_id" text NOT NULL,
 	"workspace" text NOT NULL,
 	"name" text NOT NULL,
-	"definition" jsonb NOT NULL,
-	"is_default" boolean DEFAULT false NOT NULL,
-	"created_at" timestamp with time zone NOT NULL,
-	"updated_at" timestamp with time zone NOT NULL
+	"definition" text NOT NULL,
+	"is_default" integer DEFAULT 0 NOT NULL,
+	"created_at" integer NOT NULL,
+	"updated_at" integer NOT NULL
 );
 --> statement-breakpoint
 CREATE TABLE "template_versions" (
 	"id" text PRIMARY KEY NOT NULL,
 	"template_id" text NOT NULL,
 	"version" text NOT NULL,
-	"definition" jsonb NOT NULL,
-	"published_at" timestamp with time zone,
+	"definition" text NOT NULL,
+	"published_at" integer,
 	"created_by" text NOT NULL,
-	"created_at" timestamp with time zone NOT NULL,
-	"updated_at" timestamp with time zone NOT NULL
+	"created_at" integer NOT NULL,
+	"updated_at" integer NOT NULL
 );
 --> statement-breakpoint
 CREATE TABLE "templates" (
@@ -345,8 +345,8 @@ CREATE TABLE "templates" (
 	"code" text NOT NULL,
 	"name" text NOT NULL,
 	"status" text DEFAULT 'draft' NOT NULL,
-	"created_at" timestamp with time zone NOT NULL,
-	"updated_at" timestamp with time zone NOT NULL
+	"created_at" integer NOT NULL,
+	"updated_at" integer NOT NULL
 );
 --> statement-breakpoint
 CREATE TABLE "user_roles" (
@@ -359,8 +359,8 @@ CREATE TABLE "user_roles" (
 CREATE TABLE "user_work_state" (
 	"user_id" text NOT NULL,
 	"state_key" text NOT NULL,
-	"value" jsonb NOT NULL,
-	"updated_at" timestamp with time zone NOT NULL,
+	"value" text NOT NULL,
+	"updated_at" integer NOT NULL,
 	CONSTRAINT "user_work_state_user_id_state_key_pk" PRIMARY KEY("user_id","state_key")
 );
 --> statement-breakpoint
@@ -372,8 +372,8 @@ CREATE TABLE "users" (
 	"name" text NOT NULL,
 	"status" text DEFAULT 'invited' NOT NULL,
 	"avatar_key" text DEFAULT 'avatar-01' NOT NULL,
-	"created_at" timestamp with time zone NOT NULL,
-	"updated_at" timestamp with time zone NOT NULL
+	"created_at" integer NOT NULL,
+	"updated_at" integer NOT NULL
 );
 --> statement-breakpoint
 CREATE TABLE "wbs_tasks" (
@@ -396,8 +396,8 @@ CREATE TABLE "wbs_tasks" (
 	"status" text DEFAULT 'planned' NOT NULL,
 	"completion_actor" text DEFAULT 'assignee' NOT NULL,
 	"completion_criteria" text,
-	"created_at" timestamp with time zone NOT NULL,
-	"updated_at" timestamp with time zone NOT NULL
+	"created_at" integer NOT NULL,
+	"updated_at" integer NOT NULL
 );
 --> statement-breakpoint
 CREATE TABLE "work_calendars" (
@@ -405,10 +405,10 @@ CREATE TABLE "work_calendars" (
 	"company_id" text NOT NULL,
 	"name" text NOT NULL,
 	"timezone" text DEFAULT 'Asia/Seoul' NOT NULL,
-	"working_days" jsonb NOT NULL,
-	"is_default" boolean DEFAULT false NOT NULL,
-	"created_at" timestamp with time zone NOT NULL,
-	"updated_at" timestamp with time zone NOT NULL
+	"working_days" text NOT NULL,
+	"is_default" integer DEFAULT 0 NOT NULL,
+	"created_at" integer NOT NULL,
+	"updated_at" integer NOT NULL
 );
 --> statement-breakpoint
 CREATE TABLE "workflow_history" (
@@ -420,8 +420,8 @@ CREATE TABLE "workflow_history" (
 	"previous_status" text,
 	"next_status" text,
 	"comment" text,
-	"attachments" jsonb,
-	"created_at" timestamp with time zone NOT NULL
+	"attachments" text,
+	"created_at" integer NOT NULL
 );
 --> statement-breakpoint
 CREATE TABLE "workflow_instance_steps" (
@@ -433,15 +433,15 @@ CREATE TABLE "workflow_instance_steps" (
 	"role_code" text,
 	"assignment_rule" text,
 	"due_days" integer DEFAULT 0 NOT NULL,
-	"comment_required" boolean DEFAULT false NOT NULL,
-	"attachment_required" boolean DEFAULT false NOT NULL,
+	"comment_required" integer DEFAULT 0 NOT NULL,
+	"attachment_required" integer DEFAULT 0 NOT NULL,
 	"assignee_user_id" text,
 	"status" text DEFAULT 'waiting' NOT NULL,
-	"started_at" timestamp with time zone,
-	"completed_at" timestamp with time zone,
+	"started_at" integer,
+	"completed_at" integer,
 	"comment" text,
-	"created_at" timestamp with time zone NOT NULL,
-	"updated_at" timestamp with time zone NOT NULL
+	"created_at" integer NOT NULL,
+	"updated_at" integer NOT NULL
 );
 --> statement-breakpoint
 CREATE TABLE "workflow_instances" (
@@ -463,20 +463,20 @@ CREATE TABLE "workflow_instances" (
 	"requester_user_id" text NOT NULL,
 	"main_deliverable_id" text,
 	"official_document_id" text,
-	"created_at" timestamp with time zone NOT NULL,
-	"updated_at" timestamp with time zone NOT NULL
+	"created_at" integer NOT NULL,
+	"updated_at" integer NOT NULL
 );
 --> statement-breakpoint
 CREATE TABLE "workflow_template_versions" (
 	"id" text PRIMARY KEY NOT NULL,
 	"template_id" text NOT NULL,
 	"version" integer NOT NULL,
-	"definition" jsonb NOT NULL,
+	"definition" text NOT NULL,
 	"status" text DEFAULT 'published' NOT NULL,
-	"published_at" timestamp with time zone,
+	"published_at" integer,
 	"created_by" text NOT NULL,
-	"created_at" timestamp with time zone NOT NULL,
-	"updated_at" timestamp with time zone NOT NULL
+	"created_at" integer NOT NULL,
+	"updated_at" integer NOT NULL
 );
 --> statement-breakpoint
 CREATE TABLE "workflow_templates" (
@@ -486,14 +486,14 @@ CREATE TABLE "workflow_templates" (
 	"name" text NOT NULL,
 	"application_type" text DEFAULT 'GENERAL' NOT NULL,
 	"description" text,
-	"project_required" boolean DEFAULT true NOT NULL,
+	"project_required" integer DEFAULT 1 NOT NULL,
 	"task_link_mode" text DEFAULT 'optional' NOT NULL,
-	"register_common_document" boolean DEFAULT false NOT NULL,
+	"register_common_document" integer DEFAULT 0 NOT NULL,
 	"document_category" text,
 	"status" text DEFAULT 'active' NOT NULL,
 	"current_version" integer DEFAULT 1 NOT NULL,
-	"created_at" timestamp with time zone NOT NULL,
-	"updated_at" timestamp with time zone NOT NULL
+	"created_at" integer NOT NULL,
+	"updated_at" integer NOT NULL
 );
 --> statement-breakpoint
 CREATE TABLE "workspace_tabs" (
@@ -501,10 +501,10 @@ CREATE TABLE "workspace_tabs" (
 	"tab_id" text NOT NULL,
 	"workspace" text NOT NULL,
 	"title" text NOT NULL,
-	"context" jsonb NOT NULL,
+	"context" text NOT NULL,
 	"sort_order" integer DEFAULT 0 NOT NULL,
-	"is_active" boolean DEFAULT false NOT NULL,
-	"updated_at" timestamp with time zone NOT NULL,
+	"is_active" integer DEFAULT 0 NOT NULL,
+	"updated_at" integer NOT NULL,
 	CONSTRAINT "workspace_tabs_user_id_tab_id_pk" PRIMARY KEY("user_id","tab_id")
 );
 --> statement-breakpoint

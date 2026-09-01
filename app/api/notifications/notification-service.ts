@@ -37,7 +37,7 @@ export async function notificationCandidates(db:NotificationD1,companyId:string,
       WHERE p.company_id=? AND p.status='active' AND w.kind='task' AND w.status='review' AND ((w.completion_actor='PM' AND pm.project_role='PM') OR (w.completion_actor='PL' AND pm.project_role IN ('PL','PM')))
     UNION ALL
     SELECT 'delayed',w.id,p.id,p.code,p.name,w.wbs_code,w.name,w.planned_end,w.updated_at,'담당 Task 일정 지연',1
-      FROM wbs_tasks w JOIN projects p ON p.id=w.project_id WHERE p.company_id=? AND p.status='active' AND w.kind='task' AND w.assignee_user_id=? AND w.status NOT IN ('completed','review') AND w.planned_end<date('now')
+      FROM wbs_tasks w JOIN projects p ON p.id=w.project_id WHERE p.company_id=? AND p.status='active' AND w.kind='task' AND w.assignee_user_id=? AND w.status NOT IN ('completed','review') AND w.planned_end < CURRENT_DATE::text
     UNION ALL
     SELECT 'deliverable',w.id,p.id,p.code,p.name,w.wbs_code,w.name,w.planned_end,w.updated_at,'필수 산출물 미등록',2
       FROM wbs_tasks w JOIN projects p ON p.id=w.project_id WHERE p.company_id=? AND p.status='active' AND w.kind='task' AND w.assignee_user_id=? AND w.status!='completed' AND EXISTS(SELECT 1 FROM deliverables d WHERE d.task_id=w.id AND d.required=1 AND d.status!='submitted')

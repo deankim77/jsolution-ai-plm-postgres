@@ -1,9 +1,10 @@
+import { getLegacyDbCompat } from "../../../../../db/postgres-d1-compat";
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import {canManageProject,contextErrorResponse,requireProjectAccess,resolveRequestContext} from "../../../../../db/request-context";
 type D1={prepare:(sql:string)=>any;batch:(statements:any[])=>Promise<unknown>};
 
 const baselineSchemaReadyByDb=new WeakMap<object,Promise<void>>();
-async function runtimeDb():Promise<D1>{const runtime=await import("cloudflare:workers");return runtime.env.DB as D1}
+async function runtimeDb():Promise<D1>{return getLegacyDbCompat() as D1}
 function ensureBaselineTables(db:D1){const key=db as object,existing=baselineSchemaReadyByDb.get(key);if(existing)return existing;const ready=ensureBaselineTablesImpl(db).catch(reason=>{baselineSchemaReadyByDb.delete(key);throw reason});baselineSchemaReadyByDb.set(key,ready);return ready}
 async function ensureBaselineTablesImpl(db:D1){await db.batch([
   db.prepare("CREATE TABLE IF NOT EXISTS project_baselines (id text PRIMARY KEY NOT NULL,project_id text NOT NULL,version integer NOT NULL,name text NOT NULL,captured_at integer NOT NULL,captured_by text,is_active integer DEFAULT 1 NOT NULL,FOREIGN KEY(project_id) REFERENCES projects(id) ON DELETE CASCADE)"),

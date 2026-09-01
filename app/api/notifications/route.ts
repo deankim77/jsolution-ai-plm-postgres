@@ -1,8 +1,9 @@
+import { getLegacyDbCompat } from "../../../db/postgres-d1-compat";
 import {getChatGPTUser} from "../../chatgpt-auth";
 import {contextErrorResponse,resolveRequestContext} from "../../../db/request-context";
 import {listUnreadNotifications,markAllNotificationsRead,markNotificationRead,type NotificationD1} from "./notification-service";
 
-async function runtimeDb():Promise<NotificationD1>{const runtime=await import("cloudflare:workers");return runtime.env.DB as NotificationD1;}
+async function runtimeDb():Promise<NotificationD1>{return getLegacyDbCompat() as NotificationD1;}
 
 export async function GET(request:Request){
   const auth=await getChatGPTUser(),db=await runtimeDb();
