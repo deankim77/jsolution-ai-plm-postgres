@@ -7,11 +7,19 @@ const redirectToLogin=(request:Request,reason:string)=>{
   return Response.redirect(url,303);
 };
 
+function ensureLocalRuntimeEnv(){
+  if(process.env.APP_LOGIN_PASSWORD&&process.env.APP_SESSION_SECRET)return;
+  if(typeof process.loadEnvFile!=="function")return;
+  for(const file of [".dev.vars",".env"]){
+    try{process.loadEnvFile(file)}catch{}
+    if(process.env.APP_LOGIN_PASSWORD&&process.env.APP_SESSION_SECRET)return;
+  }
+}
+
 export async function POST(request:Request){
-  const runtime=await import("cloudflare:workers");
-  const env=runtime.env as unknown as {APP_LOGIN_PASSWORD?:string;APP_SESSION_SECRET?:string};
+  ensureLocalRuntimeEnv();
   const db=getLegacyDbCompat();
-  const password=String(env.APP_LOGIN_PASSWORD||""),secret=String(env.APP_SESSION_SECRET||"");
+  const password=String(process.env.APP_LOGIN_PASSWORD||""),secret=String(process.env.APP_SESSION_SECRET||"");
   const contentType=request.headers.get("content-type")||"";
   const formMode=contentType.includes("application/x-www-form-urlencoded")||contentType.includes("multipart/form-data");
 
@@ -47,7 +55,6 @@ export async function POST(request:Request){
   }
 
   const cleanTabs={tabs:[{key:"portfolio",view:"portfolio",title:"전사 대시보드"}],active:"portfolio",templateEditorId:""};
-  await db.prepare("CREATE TABLE IF NOT EXISTS user_work_state (user_id text NOT NULL,state_key text NOT NULL,value text NOT NULL,updated_at integer NOT NULL,PRIMARY KEY(user_id,state_key))").run();
   await db.prepare(`INSERT INTO user_work_state (user_id,state_key,value,updated_at) VALUES (?,?,?,?) ON CONFLICT(user_id,state_key) DO UPDATE SET value=excluded.value,updated_at=excluded.updated_at`).bind(user.id,"v2-workspace-tabs",JSON.stringify(cleanTabs),Math.floor(Date.now()/1000)).run();
 
   const token=await createAppSession(user.email,secret);
