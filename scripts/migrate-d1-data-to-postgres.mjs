@@ -33,6 +33,8 @@ if (!fs.existsSync(sqlitePath)) throw new Error(`D1 source database not found: $
 
 const python = String.raw`
 import sqlite3, json, sys
+sys.stdout.reconfigure(encoding='utf-8')
+sys.stderr.reconfigure(encoding='utf-8')
 p=sys.argv[1]
 con=sqlite3.connect('file:'+p+'?mode=ro', uri=True)
 con.row_factory=sqlite3.Row
@@ -53,6 +55,7 @@ con.close()
 const py = spawnSync("python", ["-c", python, sqlitePath], {
   encoding: "utf8",
   maxBuffer: 256 * 1024 * 1024,
+  env: { ...process.env, PYTHONIOENCODING: "utf-8", PYTHONUTF8: "1" },
 });
 if (py.status !== 0) throw new Error(`Failed to read D1 with Python:\n${py.stderr || py.stdout}`);
 const source = JSON.parse(py.stdout);
