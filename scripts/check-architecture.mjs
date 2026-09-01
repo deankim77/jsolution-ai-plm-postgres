@@ -1,9 +1,15 @@
 import fs from "node:fs";
 import path from "node:path";
 import process from "node:process";
+import { execFileSync } from "node:child_process";
 
 const root = process.cwd();
 const errors = [];
+
+// Immutable migration baseline: the first commit copied from the legacy V2 source.
+// Existing D1/SQLite dependencies may only stay the same or decrease from this point.
+// New D1/SQLite dependencies are forbidden.
+const MIGRATION_BASELINE = "c7e7b3b";
 
 const requiredFiles = [
   "ARCHITECTURE.md",
@@ -34,6 +40,18 @@ function rel(file) {
   return path.relative(root, file).replaceAll("\\", "/");
 }
 
+function gitShow(relative) {
+  try {
+    return execFileSync("git", ["show", `${MIGRATION_BASELINE}:${relative}`], {
+      cwd: root,
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "ignore"],
+    });
+  } catch {
+    return null;
+  }
+}
+
 const appDir = path.join(root, "app");
 const uiFiles = walk(appDir).filter((file) => {
   const relative = rel(file);
@@ -58,23 +76,41 @@ for (const file of uiFiles) {
   }
 }
 
-// During the PostgreSQL migration, legacy SQLite/D1 code can still exist in the baseline.
-// The guard prevents NEW SQLite/D1 usage outside known legacy infrastructure locations.
-const allowedLegacySqliteFiles = new Set([
-  "db/index.ts",
-  "db/schema.ts",
-  "drizzle.config.ts",
-  "wrangler.jsonc",
-]);
+const legacyPatterns = [
+  { name: "drizzle-orm/d1", re: /drizzle-orm\/d1/g },
+  { name: "drizzle-orm/sqlite-core", re: /drizzle-orm\/sqlite-core/g },
+  { name: "sqliteTable", re: /\bsqliteTable\b/g },
+  { name: "env.DB", re: /\benv\.DB\b/g },
+];
 
+function countMatches(source, re) {
+  if (!source) return 0;
+  re.lastIndex = 0;
+  return [...source.matchAll(re)].length;
+}
+
+// PostgreSQL migration rule:
+// - Files existing at the immutable baseline may keep or reduce their legacy dependency count.
+// - A legacy dependency count may never increase.
+// - New files may not introduce any D1/SQLite dependency.
 const sourceRoots = ["app", "db", "lib", "worker"].flatMap((name) => walk(path.join(root, name)));
 for (const file of sourceRoots) {
   const relative = rel(file);
   if (!/\.(ts|tsx|js|jsx)$/.test(relative)) continue;
-  if (allowedLegacySqliteFiles.has(relative)) continue;
-  const source = fs.readFileSync(file, "utf8");
-  if (/drizzle-orm\/d1|drizzle-orm\/sqlite-core|\bsqliteTable\b|\benv\.DB\b/.test(source)) {
-    errors.push(`${relative}: new SQLite/D1 dependency is forbidden; PostgreSQL is the target architecture`);
+
+  const current = fs.readFileSync(file, "utf8");
+  const baseline = gitShow(relative);
+
+  for (const pattern of legacyPatterns) {
+    const currentCount = countMatches(current, pattern.re);
+    const baselineCount = countMatches(baseline, pattern.re);
+
+    if (currentCount > baselineCount) {
+      errors.push(
+        `${relative}: legacy ${pattern.name} usage increased from ${baselineCount} to ${currentCount}; ` +
+        "D1/SQLite dependencies may only decrease during the PostgreSQL migration"
+      );
+    }
   }
 }
 
@@ -83,4 +119,6 @@ if (errors.length) {
   process.exit(1);
 }
 
-console.log(`AI PLM Architecture Contract check passed (${uiFiles.length} UI source files checked).`);
+console.log(
+  `AI PLM Architecture Contract check passed (${uiFiles.length} UI source files checked; D1 baseline ${MIGRATION_BASELINE} enforced).`
+);
