@@ -24,8 +24,13 @@ function importPathFor(file) {
   return relative;
 }
 
+function hasCompatImport(source) {
+  return /import\s*\{[^}]*\bgetLegacyDbCompat\b[^}]*\}\s*from\s*["'][^"']*postgres-d1-compat["'];?/.test(source);
+}
+
 function ensureCompatImport(source, file) {
-  if (source.includes("getLegacyDbCompat")) return source;
+  if (!source.includes("getLegacyDbCompat(")) return source;
+  if (hasCompatImport(source)) return source;
   const line = `import { getLegacyDbCompat } from "${importPathFor(file)}";\n`;
   return line + source;
 }
@@ -46,14 +51,14 @@ for (const file of roots.flatMap((name) => walk(path.join(root, name)))) {
   source = source.replace(/\bruntime\.env\.DB\b/g, "getLegacyDbCompat()");
   source = source.replace(/\benv\.DB\b/g, "getLegacyDbCompat()");
 
+  source = ensureCompatImport(source, file);
+
+  // Remove the exact env-only Cloudflare import when DB was its only use.
+  if (!/\benv\./.test(source)) {
+    source = source.replace(/^import\s*\{\s*env\s*\}\s*from\s*["']cloudflare:workers["'];?\s*\r?\n/m, "");
+  }
+
   if (source !== before) {
-    source = ensureCompatImport(source, file);
-
-    // Remove the exact env-only Cloudflare import when DB was its only use.
-    if (!/\benv\./.test(source)) {
-      source = source.replace(/^import\s*\{\s*env\s*\}\s*from\s*["']cloudflare:workers["'];?\s*\r?\n/m, "");
-    }
-
     fs.writeFileSync(file, source, "utf8");
     changed.push(path.relative(root, file).replaceAll("\\", "/"));
   }
