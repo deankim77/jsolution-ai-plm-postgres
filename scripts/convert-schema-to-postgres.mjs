@@ -24,14 +24,17 @@ if (!source.includes('from "drizzle-orm/sqlite-core"')) {
 
 source = source.replace(
   /import\s*\{[^}]*\}\s*from\s*["']drizzle-orm\/sqlite-core["'];?/,
-  'import { boolean, integer, jsonb, pgTable, primaryKey, text, timestamp, uniqueIndex } from "drizzle-orm/pg-core";'
+  'import { integer, pgTable, primaryKey, text, uniqueIndex } from "drizzle-orm/pg-core";'
 );
 
-// Preserve the TypeScript behavior of the existing SQLite schema while using native PostgreSQL types.
+// Migration principle: change the database engine first, not application value semantics.
+// Existing raw D1 APIs use epoch integers, 0/1 flags and JSON strings extensively.
+// Preserve those physical representations during the PostgreSQL cutover; native PG types
+// can be introduced later behind repository/service boundaries without breaking legacy APIs.
 source = source
-  .replace(/\binteger\(([^,()]+),\s*\{\s*mode\s*:\s*["']timestamp["']\s*\}\)/g, 'timestamp($1, { withTimezone: true, mode: "date" })')
-  .replace(/\binteger\(([^,()]+),\s*\{\s*mode\s*:\s*["']boolean["']\s*\}\)/g, 'boolean($1)')
-  .replace(/\btext\(([^,()]+),\s*\{\s*mode\s*:\s*["']json["']\s*\}\)/g, 'jsonb($1)')
+  .replace(/\binteger\(([^,()]+),\s*\{\s*mode\s*:\s*["']timestamp["']\s*\}\)/g, 'integer($1)')
+  .replace(/\binteger\(([^,()]+),\s*\{\s*mode\s*:\s*["']boolean["']\s*\}\)/g, 'integer($1)')
+  .replace(/\btext\(([^,()]+),\s*\{\s*mode\s*:\s*["']json["']\s*\}\)/g, 'text($1)')
   .replace(/\bsqliteTable\b/g, "pgTable");
 
 const leftovers = [
@@ -49,5 +52,5 @@ if (unresolved.length) {
 }
 
 fs.writeFileSync(schemaPath, source, "utf8");
-console.log("Converted db/schema.ts from Drizzle SQLite schema to Drizzle PostgreSQL schema.");
+console.log("Converted db/schema.ts to PostgreSQL while preserving legacy epoch/0-1/JSON-text value semantics.");
 console.log("Next: run npm.cmd run check:contracts, then npm.cmd run db:generate with DATABASE_URL set.");
