@@ -1,6 +1,5 @@
 import {appSessionCookie,createAppSession} from "../../../../lib/app-auth";
-
-type D1={prepare:(sql:string)=>any};
+import {getLegacyDbCompat} from "../../../../db/postgres-d1-compat";
 
 const redirectToLogin=(request:Request,reason:string)=>{
   const url=new URL("/login",request.url);
@@ -10,7 +9,8 @@ const redirectToLogin=(request:Request,reason:string)=>{
 
 export async function POST(request:Request){
   const runtime=await import("cloudflare:workers");
-  const env=runtime.env as unknown as {DB:D1;APP_LOGIN_PASSWORD?:string;APP_SESSION_SECRET?:string};
+  const env=runtime.env as unknown as {APP_LOGIN_PASSWORD?:string;APP_SESSION_SECRET?:string};
+  const db=getLegacyDbCompat();
   const password=String(env.APP_LOGIN_PASSWORD||""),secret=String(env.APP_SESSION_SECRET||"");
   const contentType=request.headers.get("content-type")||"";
   const formMode=contentType.includes("application/x-www-form-urlencoded")||contentType.includes("multipart/form-data");
@@ -40,15 +40,15 @@ export async function POST(request:Request){
     return Response.json({error:"이메일 또는 비밀번호가 올바르지 않습니다."},{status:401});
   }
 
-  const user=await env.DB.prepare("SELECT id,email,name,status FROM users WHERE lower(email)=? LIMIT 1").bind(email).first() as {id:string;email:string;name:string;status:string}|null;
+  const user=await db.prepare("SELECT id,email,name,status FROM users WHERE lower(email)=? LIMIT 1").bind(email).first() as {id:string;email:string;name:string;status:string}|null;
   if(!user||user.status!=="active"){
     if(formMode)return redirectToLogin(request,"invalid");
     return Response.json({error:"사용 가능한 사용자 계정을 확인할 수 없습니다."},{status:401});
   }
 
   const cleanTabs={tabs:[{key:"portfolio",view:"portfolio",title:"전사 대시보드"}],active:"portfolio",templateEditorId:""};
-  await env.DB.prepare("CREATE TABLE IF NOT EXISTS user_work_state (user_id text NOT NULL,state_key text NOT NULL,value text NOT NULL,updated_at integer NOT NULL,PRIMARY KEY(user_id,state_key))").run();
-  await env.DB.prepare(`INSERT INTO user_work_state (user_id,state_key,value,updated_at) VALUES (?,?,?,?) ON CONFLICT(user_id,state_key) DO UPDATE SET value=excluded.value,updated_at=excluded.updated_at`).bind(user.id,"v2-workspace-tabs",JSON.stringify(cleanTabs),Math.floor(Date.now()/1000)).run();
+  await db.prepare("CREATE TABLE IF NOT EXISTS user_work_state (user_id text NOT NULL,state_key text NOT NULL,value text NOT NULL,updated_at integer NOT NULL,PRIMARY KEY(user_id,state_key))").run();
+  await db.prepare(`INSERT INTO user_work_state (user_id,state_key,value,updated_at) VALUES (?,?,?,?) ON CONFLICT(user_id,state_key) DO UPDATE SET value=excluded.value,updated_at=excluded.updated_at`).bind(user.id,"v2-workspace-tabs",JSON.stringify(cleanTabs),Math.floor(Date.now()/1000)).run();
 
   const token=await createAppSession(user.email,secret);
   if(formMode){
