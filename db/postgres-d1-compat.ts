@@ -54,7 +54,6 @@ function translateSql(input: string) {
     "FROM information_schema.tables WHERE table_schema='public' AND table_type='BASE TABLE' AND table_name IN ($1)"
   );
 
-  // Repair placeholder list after sqlite_master rewrite using the original placeholders.
   if (/information_schema\.tables/i.test(sql) && /table_name\s+IN\s*\(\$1\)/i.test(sql)) {
     const originalIn = input.match(/name\s+IN\s*\(([^)]+)\)/i)?.[1] ?? "?";
     const count = (originalIn.match(/\?/g) ?? []).length || 1;
@@ -68,9 +67,7 @@ function translateSql(input: string) {
     if (!/\bON\s+CONFLICT\b/i.test(sql)) sql = `${sql.replace(/;\s*$/, "")} ON CONFLICT DO NOTHING`;
   }
 
-  // Limited SQLite JSON compatibility used by the legacy API.
   sql = sql.replace(/json_extract\(([^,]+),\s*'\$\.([A-Za-z0-9_]+)'\)/gi, "($1::jsonb ->> '$2')");
-
   return sql;
 }
 
@@ -100,7 +97,11 @@ class Statement implements LegacyD1Statement {
   }
 }
 
-export function getLegacyDbCompat(): LegacyD1Compat {
+const globalForCompat = globalThis as typeof globalThis & {
+  __aiPlmLegacyDbCompat?: LegacyD1Compat;
+};
+
+function createLegacyDbCompat(): LegacyD1Compat {
   const pool = getDbPool();
   return {
     prepare(sql: string) {
@@ -127,4 +128,11 @@ export function getLegacyDbCompat(): LegacyD1Compat {
       }
     },
   };
+}
+
+export function getLegacyDbCompat(): LegacyD1Compat {
+  if (!globalForCompat.__aiPlmLegacyDbCompat) {
+    globalForCompat.__aiPlmLegacyDbCompat = createLegacyDbCompat();
+  }
+  return globalForCompat.__aiPlmLegacyDbCompat;
 }
