@@ -78,6 +78,33 @@ function translateSql(input: string) {
   return sql;
 }
 
+function aliasMap(sourceSql: string) {
+  const aliases = new Map<string, string>();
+  const regex = /\bAS\s+([A-Za-z_][A-Za-z0-9_]*)/gi;
+  let match: RegExpExecArray | null;
+  while ((match = regex.exec(sourceSql)) !== null) {
+    const alias = match[1];
+    if (/[A-Z]/.test(alias)) aliases.set(alias.toLowerCase(), alias);
+  }
+  return aliases;
+}
+
+function restoreLegacyAliases<T = Record<string, unknown>>(sourceSql: string, rows: T[]): T[] {
+  const aliases = aliasMap(sourceSql);
+  if (!aliases.size) return rows;
+  return rows.map(row => {
+    if (!row || typeof row !== "object" || Array.isArray(row)) return row;
+    const output = { ...(row as Record<string, unknown>) };
+    for (const [lower, original] of aliases) {
+      if (lower in output && !(original in output)) {
+        output[original] = output[lower];
+        delete output[lower];
+      }
+    }
+    return output as T;
+  });
+}
+
 class Statement implements LegacyD1Statement {
   private values: unknown[] = [];
 
@@ -90,12 +117,12 @@ class Statement implements LegacyD1Statement {
 
   async all<T = Record<string, unknown>>() {
     const result = await this.pool.query(translateSql(this.sourceSql), this.values);
-    return { results: result.rows as T[] };
+    return { results: restoreLegacyAliases(this.sourceSql, result.rows as T[]) };
   }
 
   async first<T = Record<string, unknown>>() {
     const result = await this.pool.query(translateSql(this.sourceSql), this.values);
-    return (result.rows[0] as T | undefined) ?? null;
+    return restoreLegacyAliases(this.sourceSql, result.rows as T[])[0] ?? null;
   }
 
   async run() {
@@ -123,7 +150,7 @@ function createLegacyDbCompat(): LegacyD1Compat {
           if (!(statement instanceof Statement)) throw new Error("Unsupported legacy statement implementation");
           const privateStatement = statement as Statement & { sourceSql: string; values: unknown[] };
           const result = await client.query(translateSql(privateStatement.sourceSql), privateStatement.values);
-          results.push({ success: true, meta: { changes: result.rowCount ?? 0 }, results: result.rows });
+          results.push({ success: true, meta: { changes: result.rowCount ?? 0 }, results: restoreLegacyAliases(privateStatement.sourceSql, result.rows) });
         }
         await client.query("COMMIT");
         return results;
