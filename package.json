@@ -1,5 +1,5 @@
 {
-  "name": "jsolution-ai-pms",
+  "name": "jsolution-ai-plm",
   "version": "0.1.0",
   "private": true,
   "engines": {
@@ -22,7 +22,10 @@
     "check:v2-features": "node scripts/check-v2-feature-contracts.mjs",
     "audit:react-dom": "node scripts/audit-react-dom-overrides.mjs",
     "lint": "npm run check:architecture && npm run check:v2-ui && bash scripts/sites-env.sh -- eslint . --ignore-pattern dist --ignore-pattern .next",
-    "db:generate": "bash scripts/sites-env.sh -- drizzle-kit generate",
+    "db:convert:postgres": "node scripts/convert-schema-to-postgres.mjs",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "drizzle-kit migrate",
+    "db:studio": "drizzle-kit studio",
     "data:seed:cim": "node scripts/seed-cim-demo.mjs",
     "data:upload:cim-docs": "node scripts/upload-cim-sample-deliverables.mjs",
     "data:seed:csm": "node scripts/seed-csm-demo.mjs",
@@ -34,7 +37,7 @@
     "test:auto-g6": "node --test tests/automotive-g6-portfolio.test.mjs",
     "data:generate:auto-g6-docs": "node scripts/generate-automotive-g6-deliverables.mjs --clean",
     "data:upload:auto-g6-docs": "node scripts/upload-automotive-g6-deliverables.mjs",
-    "data:seed:auto-g6-docs": "npm run data:generate:auto-g6-docs && npm run data:upload:auto-g6-docs",
+    "data:seed:auto-g6-docs": "npm run data:generate:auto-g6-docs && npm run data:upload:auto-g6-deliverables.mjs",
     "data:seed:auto-g6-execution": "node scripts/seed-automotive-g6-execution.mjs",
     "data:seed:auto-g6-all": "npm run data:seed:auto-g6 && npm run data:seed:auto-g6-docs && npm run data:seed:auto-g6-execution",
     "data:seed:hdem": "node scripts/seed-hdem-equipment-demo.mjs",
@@ -47,6 +50,7 @@
     "drizzle-orm": "0.45.2",
     "lucide-react": "^1.28.0",
     "next": "16.2.6",
+    "pg": "^8.16.3",
     "react": "19.2.6",
     "react-dom": "19.2.6"
   },
@@ -54,6 +58,7 @@
     "@cloudflare/vite-plugin": "1.37.1",
     "@tailwindcss/postcss": "4.2.1",
     "@types/node": "22.19.19",
+    "@types/pg": "^8.15.5",
     "@types/react": "19.2.14",
     "@types/react-dom": "19.2.3",
     "@vitejs/plugin-react": "6.0.2",
@@ -68,5 +73,5 @@
     "wrangler": "4.92.0"
   },
   "type": "module",
-  "displayName": "J SOLUTION AI PMS"
+  "displayName": "J SOLUTION AI PLM"
 }
