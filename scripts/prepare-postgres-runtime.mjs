@@ -42,4 +42,19 @@ patch("app/api/product-data/route.ts", source => source.replace(
   `async function ensureTables(_db:D1){return;}`,
 ));
 
+patch("app/api/workflows/shared.ts", source => {
+  let out=source;
+  if(!out.includes('from "../../../db/postgres-d1-compat"')){
+    out=out.replace(
+      'import type {RequestContext} from "../../../db/request-context";',
+      'import type {RequestContext} from "../../../db/request-context";\nimport {getLegacyDbCompat} from "../../../db/postgres-d1-compat";',
+    );
+  }
+  out=out.replace(
+    /export async function workflowDb\(\):Promise<D1>\{const runtime=await import\("cloudflare:workers"\);const db=runtime\.env\.DB as unknown as D1;await ensureProjectDataFoundation\(db as RuntimeD1\);await ensureWorkflowFoundation\(db as RuntimeD1\);return db\}/,
+    'export async function workflowDb():Promise<D1>{const db=getLegacyDbCompat() as unknown as D1;await ensureProjectDataFoundation(db as RuntimeD1);await ensureWorkflowFoundation(db as RuntimeD1);return db}',
+  );
+  return out;
+});
+
 console.log("PostgreSQL runtime preparation complete.");
