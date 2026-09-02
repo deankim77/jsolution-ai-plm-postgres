@@ -231,6 +231,8 @@ export default function DocumentLibraryWorkspace({project,projects,tasks,initial
       const available=await getTasks(registrationProject);
       const task=available.find(row=>row.kind==="task");
       if(!task){setNotice("연결할 Task가 없습니다.");return}
+      setActiveTab("library");
+      onLibraryModeChange?.(mode==="drawing"?"drawing":"document");
       onAddDeliverable(registrationProject.id,task.id,mode);
     }catch(reason){setNotice(reason instanceof Error?reason.message:"Task를 불러오지 못했습니다.")}
   };
