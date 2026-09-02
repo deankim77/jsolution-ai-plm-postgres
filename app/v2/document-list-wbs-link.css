@@ -24,6 +24,9 @@
   color:#fff;
 }
 
+/* Keep the existing drawing-library tab visible; legacy preview bridge may set inline display:none. */
+.wv2-document-workspace .wv2-preview-tabs>button:nth-child(2){display:inline-flex!important}
+
 .wv2-preview-document-table>header>span:nth-child(3){
   position:static!important;
   left:auto!important;
