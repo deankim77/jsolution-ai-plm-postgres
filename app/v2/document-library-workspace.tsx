@@ -278,7 +278,7 @@ export default function DocumentLibraryWorkspace({project,projects,tasks,initial
           {visibleItems.map(item=>{const latest=latestFor(item.id),Icon=latest?iconFor(latest.fileName):FileText,drawing=isDrawing(item);return <article key={item.id} onClick={()=>onOpenDetail?.(item.id)}>
             <span className="select"><input type="checkbox" checked={selection.has(contextFor(item))} onClick={event=>event.stopPropagation()} onChange={()=>selection.toggle(contextFor(item))}/></span>
             <button className="name"><Icon size={18}/><span><b>{item.name}</b><small>{drawing?`${item.drawingCode||"도면코드"} · ${item.drawingType||"도면"}`:categoryLabel(item.type)}</small></span></button>
-            <button className="wv2-document-task"><b>{item.taskName?`${item.taskName}${item.taskCode?` (${item.taskCode})`:""}`:"WBS 미지정"}</b><small>{item.projectName||"프로젝트 미지정"}{item.projectCode?` (${item.projectCode})`:""}</small></button>
+            <button className="wv2-document-task"><b>{item.projectName||"프로젝트 미지정"}{item.projectCode?` · ${item.projectCode}`:""}</b><small>{item.taskName?`${item.taskName}${item.taskCode?` · ${item.taskCode}`:""}`:"WBS 미지정"}</small></button>
             <span className="wv2-document-author"><b>{latest?.createdBy||"작성자 미상"}</b><small>{formatCreatedAt(latest?.createdAt)}</small></span>
             <button className="wv2-revision-link">{latest?<><b>Rev.{String(latest.revision).padStart(2,"0")}</b><small>{latest.fileName}</small></>:"—"}</button>
             <span className="wv2-document-status"><i className="submitted">{statusLabel(item.status)}</i></span>
