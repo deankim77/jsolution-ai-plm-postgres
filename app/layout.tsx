@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import "./project-lifecycle.css";
 import "./wbs-ux-fix.css";
@@ -40,9 +39,6 @@ import WbsOpenDefaultView from "./wbs-open-default-view";
 import ProjectSuperuserActions from "./project-superuser-actions";
 import GlobalAiPanelShift from "./global-ai-panel-shift";
 
-const geistSans = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
-const geistMono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"] });
-
 export const metadata: Metadata = {
   title: "J SOLUTION AI PMS | MY AI HOME",
   description: "실제 프로젝트 데이터로 오늘의 업무와 위험을 알려주는 AI 중심 PMS",
@@ -51,7 +47,7 @@ export const metadata: Metadata = {
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
-  return <html lang="ko"><body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
+  return <html lang="ko"><body>
     {children}
     <ProjectLifecycleEnhancer />
     <WbsDirectContext />
