@@ -1,10 +1,11 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { getChatGPTUser } from "../../../../chatgpt-auth";
 import {contextErrorResponse,resolveRequestContext} from "../../../../../db/request-context";
+import {getLegacyDbCompat} from "../../../../../db/postgres-d1-compat";
 
 type D1Statement={bind:(...values:unknown[])=>D1Statement;all:()=>Promise<{results?:any[]}>;first:<T=any>()=>Promise<T|null>;run:()=>Promise<unknown>};
 type D1={prepare:(sql:string)=>D1Statement;batch:(statements:D1Statement[])=>Promise<unknown>};
-async function runtime():Promise<{DB:D1}>{const cloudflare=await import("cloudflare:workers");return cloudflare.env as unknown as {DB:D1};}
+async function runtime():Promise<{DB:D1}>{return {DB:getLegacyDbCompat() as unknown as D1};}
 
 export async function POST(request:Request){
   const authenticated=await getChatGPTUser();
