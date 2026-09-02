@@ -274,14 +274,15 @@ export default function DocumentLibraryWorkspace({project,projects,tasks,initial
         {loading&&!items.length?<div className="wv2-preview-empty"><RefreshCw className="wv2-spin" size={25}/><b>등록 문서를 불러오는 중…</b></div>
         :<div className="wv2-document-table wv2-preview-document-table">
           <header><span className="select"><input type="checkbox" checked={Boolean(items.length)&&items.every(item=>selection.has(contextFor(item)))} onChange={()=>items.every(item=>selection.has(contextFor(item)))?selection.clear():items.forEach(item=>{if(!selection.has(contextFor(item)))selection.toggle(contextFor(item))})}/></span><span>산출물</span><span>프로젝트 · WBS</span><span>구분</span><span>Revision</span><span>상태</span><span/></header>
-          {items.map(item=>{const latest=latestFor(item.id),Icon=latest?iconFor(latest.fileName):FileText,drawing=isDrawing(item);return <article key={item.id}>
-            <span className="select"><input type="checkbox" checked={selection.has(contextFor(item))} onChange={()=>selection.toggle(contextFor(item))}/></span>
-            <button className="name" onClick={()=>onOpenDetail?onOpenDetail(item.id):latest&&openPreview(item)}><Icon size={18}/><span><b>{item.name}</b><small>{drawing?`${item.drawingCode||"도면코드"} · ${item.drawingType||"도면"}`:item.type||"일반문서"}</small></span></button>
-            <button className="wv2-document-task" disabled={!item.taskId} onClick={()=>item.taskId&&onOpenTask(item.projectId,item.taskId)}><b>{item.projectCode||"프로젝트 미지정"} · {item.projectName||""}</b><small>{item.taskCode?`${item.taskCode} ${item.taskName||""}`:"WBS 미지정"}</small></button>
+          {items.map(item=>{const latest=latestFor(item.id),Icon=latest?iconFor(latest.fileName):FileText,drawing=isDrawing(item);return <article key={item.id} onClick={()=>onOpenDetail?.(item.id)}>
+            <span className="select"><input type="checkbox" checked={selection.has(contextFor(item))} onClick={event=>event.stopPropagation()} onChange={()=>selection.toggle(contextFor(item))}/></span>
+            <button className="name"><Icon size={18}/><span><b>{item.name}</b><small>{drawing?`${item.drawingCode||"도면코드"} · ${item.drawingType||"도면"}`:item.type||"일반문서"}</small></span></button>
+            <button className="wv2-document-task"><b>{item.projectCode||"프로젝트 미지정"} · {item.projectName||""}</b><small>{item.taskCode?`${item.taskCode} ${item.taskName||""}`:"WBS 미지정"}</small></button>
             <em>{drawing?"도면":"문서"}</em>
-            <button className="wv2-revision-link" disabled={!latest} onClick={()=>latest&&openPreview(item)}>{latest?<><b>Rev.{String(latest.revision).padStart(2,"0")}</b><small>{latest.fileName} · {bytes(latest.fileSize)}</small></>:"—"}</button>
+            <button className="wv2-revision-link">{latest?<><b>Rev.{String(latest.revision).padStart(2,"0")}</b><small>{latest.fileName} · {bytes(latest.fileSize)}</small></>:"—"}</button>
             <span className="wv2-document-status"><i className="submitted">{statusLabel(item.status)}</i></span>
-            <button disabled={!latest} onClick={()=>latest&&openPreview(item)}>미리보기</button>
+            <button type="button" className="wv2-document-wbs-link" disabled={!item.taskId} onClick={event=>{event.stopPropagation();if(item.taskId)onOpenTask(item.projectId,item.taskId)}}>WBS 이동</button>
+            <button type="button" className="wv2-document-preview-link" disabled={!latest} onClick={event=>{event.stopPropagation();if(latest)openPreview(item,latest)}}>미리보기</button>
           </article>})}
         </div>}
       </>}
