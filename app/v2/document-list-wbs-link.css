@@ -1,9 +1,9 @@
-/* Document list: keep the existing list and only tighten column spacing. */
+/* Document library list: prioritize document identity, WBS context, author/date, revision and actions. */
 .wv2-preview-document-table>header,
 .wv2-preview-document-table>article{
-  min-width:1080px;
-  grid-template-columns:32px minmax(205px,.92fr) minmax(245px,1.02fr) 76px minmax(195px,.88fr) 76px 82px 82px!important;
-  column-gap:7px;
+  min-width:1220px;
+  grid-template-columns:32px minmax(245px,1.1fr) minmax(330px,1.4fr) 132px minmax(190px,.9fr) 84px 82px 82px!important;
+  column-gap:8px;
 }
 
 /* The document/drawing libraries no longer use summary KPI cards. */
@@ -24,7 +24,6 @@
   color:#fff;
 }
 
-/* Shift Project · WBS, 구분, Revision, 상태 slightly left using the existing grid only. */
 .wv2-preview-document-table>header>span:nth-child(3){
   position:static!important;
   left:auto!important;
@@ -40,7 +39,48 @@
 .wv2-preview-document-table>article{position:relative;cursor:pointer}
 .wv2-preview-document-table>article>.select{cursor:default}
 
-/* Existing preview action + new WBS action: keep both on the SAME row. */
+.wv2-preview-document-table>article>.name,
+.wv2-preview-document-table>article>.wv2-document-task,
+.wv2-preview-document-table>article>.wv2-revision-link{
+  min-width:0;
+}
+.wv2-preview-document-table>article>.name span,
+.wv2-preview-document-table>article>.wv2-document-task,
+.wv2-preview-document-table>article>.wv2-revision-link,
+.wv2-preview-document-table>article>.wv2-document-author{
+  overflow:hidden;
+}
+.wv2-preview-document-table>article>.name b,
+.wv2-preview-document-table>article>.name small,
+.wv2-preview-document-table>article>.wv2-document-task b,
+.wv2-preview-document-table>article>.wv2-document-task small,
+.wv2-preview-document-table>article>.wv2-revision-link b,
+.wv2-preview-document-table>article>.wv2-revision-link small,
+.wv2-preview-document-table>article>.wv2-document-author b,
+.wv2-preview-document-table>article>.wv2-document-author small{
+  display:block;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+.wv2-preview-document-table>article>.wv2-document-author{
+  display:flex;
+  min-width:0;
+  flex-direction:column;
+  justify-content:center;
+  gap:3px;
+  color:var(--text);
+}
+.wv2-preview-document-table>article>.wv2-document-author b{
+  font-size:var(--v2-font-size-control);
+  font-weight:700;
+}
+.wv2-preview-document-table>article>.wv2-document-author small{
+  color:var(--muted);
+  font-size:12px;
+}
+
+/* WBS and preview are the only row-level actions; every other cell opens detail. */
 .wv2-preview-document-table>article>.wv2-document-wbs-link,
 .wv2-preview-document-table>article>.wv2-document-preview-link{
   position:static!important;
