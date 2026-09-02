@@ -1,5 +1,6 @@
 "use client";
 
+import "./document-list-wbs-link.css";
 import {Suspense,lazy,useEffect,useState,type ComponentType} from "react";
 import DocumentManagementPanel from "./document-management-panel";
 
