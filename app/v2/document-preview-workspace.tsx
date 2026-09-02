@@ -1,6 +1,7 @@
 "use client";
 
 import {useEffect,useState,type ComponentType} from "react";
+import {FileText,Filter,Search} from "lucide-react";
 
 type Deliverable={
   id:string;
@@ -19,6 +20,15 @@ type ListResponse={
   total?:number;
   error?:string;
 };
+
+const rowStyle={
+  display:"grid",
+  gridTemplateColumns:"minmax(280px,2fr) minmax(260px,1.45fr) minmax(120px,.65fr) 96px",
+  alignItems:"center",
+  minHeight:54,
+  columnGap:14,
+  padding:"0 16px",
+} as const;
 
 function DocumentWorkspace(){
   const [items,setItems]=useState<Deliverable[]>([]);
@@ -61,21 +71,51 @@ function DocumentWorkspace(){
       </div>
     </header>
 
-    <div style={{padding:"0 24px 18px",fontSize:13}}>
-      {loading?"목록 조회 중...":error?error:`전체 ${total}건 · 현재 ${items.length}건`}
+    <div className="wv2-module-summary">
+      <article><span>전체 항목</span><b>{total}</b></article>
+      <article><span>현재 표시</span><b>{items.length}</b></article>
+      <article><span>문서 라이브러리</span><b>전체</b></article>
+      <article><span>프로젝트 범위</span><b>전체</b></article>
     </div>
 
-    {!loading&&!error&&<div style={{display:"grid",gap:8,padding:"0 24px 24px",overflow:"auto"}}>
-      {items.map(item=><div key={item.id} style={{display:"grid",gridTemplateColumns:"minmax(240px,2fr) minmax(220px,1fr)",gap:16,padding:"12px 14px",border:"1px solid #e5e7eb",borderRadius:8,background:"#fff"}}>
-        <div style={{minWidth:0}}>
-          <b style={{display:"block",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{item.name}</b>
-          <small>{item.type||"일반문서"}</small>
+    <div className="wv2-module-toolbar">
+      <label>
+        <Search size={17}/>
+        <input readOnly placeholder="프로젝트 · 산출물명 · 카테고리 검색"/>
+      </label>
+      <button type="button" disabled><Filter size={17}/>상세 필터</button>
+      <span>{loading?"조회 중...":error?"조회 오류":`${total}개 항목`}</span>
+    </div>
+
+    {error&&<p className="wv2-module-notice">{error}</p>}
+
+    {!error&&<div style={{margin:"0 24px 24px",border:"1px solid var(--wv2-border,#e5e7eb)",borderRadius:10,background:"#fff",overflow:"hidden"}}>
+      <div style={{...rowStyle,minHeight:42,borderBottom:"1px solid var(--wv2-border,#e5e7eb)",background:"#f8fafc",fontSize:12,fontWeight:700,color:"#64748b"}}>
+        <span>산출물</span>
+        <span>프로젝트 · WBS</span>
+        <span>구분</span>
+        <span>작업</span>
+      </div>
+
+      {loading?<div style={{padding:"48px 16px",textAlign:"center",fontSize:13,color:"#64748b"}}>산출물 목록을 조회하고 있습니다.</div>:
+        <div style={{maxHeight:"calc(100vh - 390px)",overflow:"auto"}}>
+          {items.map((item,index)=><div key={item.id} style={{...rowStyle,borderBottom:index===items.length-1?"none":"1px solid #eef2f7",fontSize:13}}>
+            <div style={{display:"flex",alignItems:"center",gap:10,minWidth:0}}>
+              <span style={{width:30,height:30,borderRadius:7,display:"inline-flex",alignItems:"center",justifyContent:"center",background:"#f1f5f9",flex:"0 0 auto"}}><FileText size={16}/></span>
+              <span style={{minWidth:0}}>
+                <b style={{display:"block",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",fontSize:13}}>{item.name}</b>
+                <small style={{display:"block",marginTop:3,color:"#64748b"}}>{item.type||"일반문서"}</small>
+              </span>
+            </div>
+            <div style={{minWidth:0}}>
+              <b style={{display:"block",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",fontSize:12.5}}>{item.projectCode||""}{item.projectName?` · ${item.projectName}`:""}</b>
+              <small style={{display:"block",marginTop:3,color:"#64748b",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{item.taskCode?`${item.taskCode} ${item.taskName||""}`:"프로젝트 공통"}</small>
+            </div>
+            <span style={{color:"#475569"}}>{item.type||"일반문서"}</span>
+            <span style={{color:"#94a3b8"}}>—</span>
+          </div>)}
         </div>
-        <div style={{minWidth:0}}>
-          <b style={{display:"block",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{item.projectCode||""}{item.projectName?` · ${item.projectName}`:""}</b>
-          <small>{item.taskCode?`${item.taskCode} ${item.taskName||""}`:"프로젝트 공통"}</small>
-        </div>
-      </div>)}
+      }
     </div>}
   </section>;
 }
