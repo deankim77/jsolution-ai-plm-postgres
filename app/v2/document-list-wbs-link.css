@@ -34,20 +34,6 @@
   width:100%!important;
   min-width:0;
   cursor:pointer;
-  display:flex!important;
-  flex-direction:column!important;
-  justify-content:center;
-  align-items:flex-start;
-}
-.wv2-preview-document-table>article>.wv2-document-task>b{
-  order:1!important;
-  font-weight:700;
-}
-.wv2-preview-document-table>article>.wv2-document-task>small{
-  order:2!important;
-  color:var(--muted);
-  font-size:12px;
-  font-weight:400!important;
 }
 
 .wv2-preview-document-table>article{position:relative;cursor:pointer}
