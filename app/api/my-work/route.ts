@@ -19,12 +19,9 @@ const positiveInteger=(value:string|null,fallback:number)=>{
 };
 
 export async function GET(request:Request){
-  const totalStarted=Date.now();
-  const timings:Record<string,number>={};
-  const timed=async<T>(name:string,work:Promise<T>)=>{const started=Date.now();try{return await work}finally{timings[name]=Date.now()-started}};
-  const auth=await timed("auth",getChatGPTUser());
-  const db=await timed("db",runtimeDb());
-  let context;try{context=await timed("context",resolveRequestContext(request,db,{email:auth?.email}))}catch(reason){return contextErrorResponse(reason)??Response.json({error:"로그인이 필요합니다."},{status:401})}
+  const auth=await getChatGPTUser();
+  const db=await runtimeDb();
+  let context;try{context=await resolveRequestContext(request,db,{email:auth?.email})}catch(reason){return contextErrorResponse(reason)??Response.json({error:"로그인이 필요합니다."},{status:401})}
   const user={id:context.userId,email:context.email||auth?.email||"",name:context.name||auth?.displayName||"사용자"};
   const url=new URL(request.url);
   const limit=Math.min(MAX_PAGE_SIZE,Math.max(10,positiveInteger(url.searchParams.get("limit"),PAGE_SIZE)));
@@ -233,16 +230,12 @@ export async function GET(request:Request){
   `).bind(...baseValues);
 
   const [taskResult,countResult,summaryResult,projectResult]=await Promise.all([
-    timed("task",taskStatement.all()),
-    timed("count",countStatement.first<SummaryRow>()),
-    includeSummary?timed("summary",summaryStatement.first<SummaryRow>()):Promise.resolve(null),
-    timed("projects",projectsStatement.all<ProjectOption>()),
+    taskStatement.all(),
+    countStatement.first<SummaryRow>(),
+    includeSummary?summaryStatement.first<SummaryRow>():Promise.resolve(null),
+    projectsStatement.all<ProjectOption>(),
   ]);
   const total=Number(countResult?.total||0);
-
-  timings.total=Date.now()-totalStarted;
-  const serverTiming=Object.entries(timings).map(([name,duration])=>`${name};dur=${duration}`).join(", ");
-  console.info("[MY_WORK_TIMING]",JSON.stringify({scope,includeSummary,limit,offset,...timings}));
 
   return Response.json({
     user:{id:user.id,email:user.email,name:user.name},

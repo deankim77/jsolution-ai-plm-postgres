@@ -23,7 +23,7 @@ async function ensureCompatibility(db:D1){
 const ensureCompatibilityOnce=(db:D1)=>compatibilityReady??=(ensureCompatibility(db).catch(reason=>{compatibilityReady=null;throw reason}));
 const positiveInt=(value:string|null,fallback:number)=>{const parsed=Number.parseInt(value||"",10);return Number.isFinite(parsed)&&parsed>=0?parsed:fallback};
 const versionSelect=`SELECT v.id,v.project_id AS projectId,v.deliverable_id AS deliverableId,v.task_id AS taskId,v.revision,v.file_name AS fileName,v.file_size AS fileSize,v.content_type AS contentType,v.note,v.preview_file_key AS previewFileKey,v.conversion_status AS conversionStatus,v.conversion_error AS conversionError,v.converted_at AS convertedAt,v.created_at AS createdAt,u.name AS createdBy FROM deliverable_versions v JOIN projects p ON p.id=v.project_id LEFT JOIN users u ON u.id=v.created_by`;
-const drawingIdentitySql="(COALESCE(d.drawing_code,'')<>'' OR COALESCE(d.document_kind,'document')='drawing')";
+const drawingIdentitySql="(COALESCE(d.document_kind,'document')='drawing' OR (COALESCE(d.drawing_code,'')<>'' AND COALESCE(d.category,'')='DESIGN_DRAWING'))";
 const documentKindSelect=`CASE WHEN ${drawingIdentitySql} THEN 'drawing' ELSE 'document' END`;
 
 export async function GET(request:Request){

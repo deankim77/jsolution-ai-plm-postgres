@@ -1,9 +1,11 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import {contextErrorResponse,requireProjectAccess,resolveRequestContext} from "../../../../../db/request-context";
+import {getStorageAdapter} from "../../../../../lib/storage-adapter";
+import {getLegacyDbCompat} from "../../../../../db/postgres-d1-compat";
 
 type D1={prepare:(sql:string)=>any};
 type R2Bucket={put:(key:string,value:ReadableStream|ArrayBuffer|Blob|string,options?:any)=>Promise<unknown>};
-async function runtime(){const runtime=await import("cloudflare:workers");return runtime.env as unknown as {DB:D1;FILES?:R2Bucket};}
+async function runtime(){return {DB:getLegacyDbCompat() as unknown as D1,FILES:getStorageAdapter() as unknown as R2Bucket};}
 
 export async function POST(request:Request,{params}:{params:Promise<{projectId:string}>}){
   const {projectId}=await params;const {DB:db,FILES}=await runtime();
