@@ -147,7 +147,7 @@ export default function DocumentPreviewOverlayBridge(){
       if(projectAction){event.preventDefault();event.stopPropagation();event.stopImmediatePropagation();if(resolving)return;const row=projectAction.closest(".project-plm-table > button") as HTMLElement|null;if(!row)return;resolving=true;void resolveDeliverable(row,true).then(openFound).finally(()=>{resolving=false});return}
       const row=targetNode.closest(".wv2-preview-document-table > article") as HTMLElement|null;if(!row)return;
       if(targetNode.closest(".wv2-document-wbs-link")||targetNode.closest(".wv2-document-task")||targetNode.closest(".select")||targetNode.closest("input[type='checkbox']"))return;
-      const previewControl=targetNode.closest("button.name,.wv2-revision-link,.wv2-document-preview-overlay-trigger,.wv2-document-preview-link");if(!previewControl)return;
+      const previewControl=targetNode.closest(".wv2-document-preview-overlay-trigger,.wv2-document-preview-link");if(!previewControl)return;
       event.preventDefault();event.stopPropagation();event.stopImmediatePropagation();if(resolving)return;resolving=true;void resolveDeliverable(row,false).then(openFound).finally(()=>{resolving=false});
     };
     document.addEventListener("click",handler,true);return()=>document.removeEventListener("click",handler,true);
