@@ -1,15 +1,18 @@
 "use client";
 
 import {lazy,Suspense,useEffect,useRef,useState} from "react";
-import {FileImage,FileSpreadsheet,FileText,FileType2,Plus,RefreshCw,Upload,X} from "lucide-react";
+import {FileImage,FileSpreadsheet,FileText,FileType2,Filter,Plus,RefreshCw,Upload,X} from "lucide-react";
 import type {V2Project} from "./project-workspaces";
 import {useAiContextSelection} from "./ai-context-selection";
+import {CommonProjectSelector} from "./common-project-selector";
+import {FilterChipGroup,FilterSection,FilterSelect,type WorkspaceFilterConfig} from "./workspace-filter-panel";
 import type {DocumentPreviewDeliverable,DocumentPreviewTab,DocumentPreviewVersion} from "./document-preview-renderer";
 
 const DocumentPreviewRenderer=lazy(()=>import("./document-preview-renderer"));
 
 type ModuleTask={id:string;wbsCode:string;kind:string;name:string};
 type LibraryMode="document"|"drawing";
+type DocumentFilters={review:string;required:string;source:string;category:string};
 type Deliverable=DocumentPreviewDeliverable&{
   projectCode?:string;
   projectName?:string;
@@ -17,6 +20,7 @@ type Deliverable=DocumentPreviewDeliverable&{
   taskCode?:string;
   taskName?:string;
   type?:string;
+  required?:boolean|number;
   status:string;
   source:string;
   revisionCount:number;
@@ -28,7 +32,7 @@ type DeliverableVersion=DocumentPreviewVersion&{
   createdAt:number;
   createdBy?:string;
 };
-type ListResponse={deliverables?:Deliverable[];versions?:DeliverableVersion[];error?:string};
+type ListResponse={deliverables?:Deliverable[];versions?:DeliverableVersion[];total?:number;categories?:string[];error?:string};
 
 type Props={
   project:V2Project|null;
@@ -38,19 +42,20 @@ type Props={
   onInitialOpened?:()=>void;
   onOpenTask:(projectId:string,taskId:string)=>void;
   onAddDeliverable:(projectId:string,taskId:string,mode?:"deliverable"|"drawing",deliverableId?:string)=>void;
-  onOpenFilter?:unknown;
+  onOpenFilter?:(config:WorkspaceFilterConfig)=>void;
   libraryMode?:LibraryMode;
   onLibraryModeChange?:(mode:LibraryMode)=>void;
   onOpenDetail?:(deliverableId:string)=>void;
   refreshVersion?:number;
 };
 
+const emptyDocumentFilters:DocumentFilters={review:"",required:"",source:"",category:""};
 const bytes=(value:number)=>value>=1024*1024?`${(value/1024/1024).toFixed(1)} MB`:value>=1024?`${Math.round(value/1024)} KB`:`${value||0} B`;
 const iconFor=(name:string)=>/\.(png|jpe?g|gif|webp|svg)$/i.test(name)?FileImage:/\.xlsx?$/i.test(name)?FileSpreadsheet:/\.(docx?|pdf|pptx?)$/i.test(name)?FileType2:FileText;
 const isDrawing=(item:Deliverable)=>item.documentKind==="drawing";
 const statusLabel=(status:string)=>status==="approved"?"승인":status==="rejected"?"반려":"등록 완료";
 
-export default function DocumentLibraryWorkspace({project,projects,tasks,initialDeliverableId,onInitialOpened,onOpenTask,onAddDeliverable,libraryMode="document",onLibraryModeChange,onOpenDetail,refreshVersion=0}:Props){
+export default function DocumentLibraryWorkspace({project,projects,tasks,initialDeliverableId,onInitialOpened,onOpenTask,onAddDeliverable,onOpenFilter,libraryMode="document",onLibraryModeChange,onOpenDetail,refreshVersion=0}:Props){
   const selection=useAiContextSelection("문서 · 산출물");
   const [items,setItems]=useState<Deliverable[]>([]);
   const [versions,setVersions]=useState<DeliverableVersion[]>([]);
@@ -58,24 +63,40 @@ export default function DocumentLibraryWorkspace({project,projects,tasks,initial
   const [notice,setNotice]=useState("");
   const [tabs,setTabs]=useState<DocumentPreviewTab[]>([]);
   const [activeTab,setActiveTab]=useState("library");
+  const [query,setQuery]=useState("");
+  const [debouncedQuery,setDebouncedQuery]=useState("");
+  const [projectFilter,setProjectFilter]=useState("");
+  const [filters,setFilters]=useState<DocumentFilters>(emptyDocumentFilters);
+  const [draftFilters,setDraftFilters]=useState<DocumentFilters>(emptyDocumentFilters);
+  const [filterOpen,setFilterOpen]=useState(false);
+  const [categories,setCategories]=useState<string[]>([]);
+  const [total,setTotal]=useState(0);
   const viewerRef=useRef<HTMLDivElement|null>(null);
   const handledInitialDeliverableRef=useRef("");
 
   const latestFor=(deliverableId:string)=>versions.find(version=>version.deliverableId===deliverableId);
+  const activeFilterCount=Object.values(filters).filter(Boolean).length;
+  const draftActiveCount=Object.values(draftFilters).filter(Boolean).length;
 
   useEffect(()=>{
-    const mountedAt=performance.now();
-    console.info("[DOCUMENT_CLIENT] mount",Math.round(mountedAt));
-    return()=>console.info("[DOCUMENT_CLIENT] unmount",Math.round(performance.now()));
-  },[]);
+    const timer=window.setTimeout(()=>setDebouncedQuery(query.trim()),300);
+    return()=>window.clearTimeout(timer);
+  },[query]);
 
   useEffect(()=>{
     const controller=new AbortController();
     const started=performance.now();
+    const params=new URLSearchParams({documentKind:libraryMode,registration:"completed"});
+    if(debouncedQuery)params.set("q",debouncedQuery);
+    if(projectFilter)params.set("projectId",projectFilter);
+    if(filters.review)params.set("review",filters.review);
+    if(filters.required)params.set("required",filters.required);
+    if(filters.source)params.set("source",filters.source);
+    if(filters.category)params.set("category",filters.category);
     setLoading(true);
     setNotice("");
     console.info("[DOCUMENT_CLIENT] fetch-start",{libraryMode,at:Math.round(started)});
-    fetch(`/api/deliverables?documentKind=${libraryMode}&registration=completed`,{cache:"no-store",signal:controller.signal})
+    fetch(`/api/deliverables?${params.toString()}`,{cache:"no-store",signal:controller.signal})
       .then(async response=>{
         const data=await response.json() as ListResponse;
         console.info("[DOCUMENT_CLIENT] fetch-response",{libraryMode,status:response.status,duration:Math.round(performance.now()-started)});
@@ -89,17 +110,60 @@ export default function DocumentLibraryWorkspace({project,projects,tasks,initial
         console.info("[DOCUMENT_CLIENT] before-setItems",{count:registered.length,versions:nextVersions.length,at:Math.round(performance.now())});
         setVersions(nextVersions);
         setItems(registered);
+        setTotal(registered.length);
+        setCategories(data.categories??[]);
         queueMicrotask(()=>console.info("[DOCUMENT_CLIENT] after-setItems-microtask",Math.round(performance.now())));
       })
       .catch(reason=>{
         if(reason instanceof DOMException&&reason.name==="AbortError")return;
         setItems([]);
         setVersions([]);
+        setTotal(0);
         setNotice(reason instanceof Error?reason.message:"산출물을 불러오지 못했습니다.");
       })
       .finally(()=>{if(!controller.signal.aborted)setLoading(false)});
     return()=>controller.abort();
-  },[libraryMode,refreshVersion]);
+  },[libraryMode,refreshVersion,debouncedQuery,projectFilter,filters]);
+
+  useEffect(()=>{
+    if(!filterOpen||!onOpenFilter)return;
+    let alive=true;
+    const controller=new AbortController();
+    const timer=window.setTimeout(()=>{
+      const params=new URLSearchParams({documentKind:libraryMode,registration:"completed"});
+      if(debouncedQuery)params.set("q",debouncedQuery);
+      if(projectFilter)params.set("projectId",projectFilter);
+      if(draftFilters.review)params.set("review",draftFilters.review);
+      if(draftFilters.required)params.set("required",draftFilters.required);
+      if(draftFilters.source)params.set("source",draftFilters.source);
+      if(draftFilters.category)params.set("category",draftFilters.category);
+      void fetch(`/api/deliverables?${params.toString()}`,{cache:"no-store",signal:controller.signal})
+        .then(async response=>{const data=await response.json() as ListResponse;if(!response.ok)throw new Error(data.error||"필터 결과를 불러오지 못했습니다.");return data})
+        .then(data=>{
+          if(!alive)return;
+          const nextVersions=data.versions??[];
+          const resultCount=(data.deliverables??[]).filter(item=>nextVersions.some(version=>version.deliverableId===item.id)).length;
+          onOpenFilter({
+            eyebrow:"DOCUMENT FILTER",
+            title:"문서 · 산출물 상세 필터",
+            description:"등록된 문서를 상태, 생성 구분, 필수 여부와 카테고리로 찾습니다.",
+            resultCount,
+            activeCount:draftActiveCount,
+            onCancel:()=>setFilterOpen(false),
+            onApply:()=>{setFilters({...draftFilters});setFilterOpen(false)},
+            onReset:()=>setDraftFilters({...emptyDocumentFilters}),
+            content:<>
+              <FilterSection title="상태"><FilterChipGroup options={[{value:"all",label:"전체"},{value:"pending",label:"미승인"},{value:"approved",label:"승인"},{value:"rejected",label:"반려"}]} selected={[draftFilters.review||"all"]} onToggle={value=>setDraftFilters(current=>({...current,review:value==="all"?"":value}))}/></FilterSection>
+              <FilterSection title="생성 구분"><FilterChipGroup options={[{value:"all",label:"전체"},{value:"planned",label:"계획 산출물"},{value:"ad_hoc",label:"추가 산출물"},{value:"ai",label:"AI 문서"}]} selected={[draftFilters.source||"all"]} onToggle={value=>setDraftFilters(current=>({...current,source:value==="all"?"":value}))}/></FilterSection>
+              <FilterSection title="필수 여부"><FilterChipGroup options={[{value:"all",label:"전체"},{value:"required",label:"필수"},{value:"optional",label:"선택"}]} selected={[draftFilters.required||"all"]} onToggle={value=>setDraftFilters(current=>({...current,required:value==="all"?"":value}))}/></FilterSection>
+              <FilterSelect label="문서 카테고리" value={draftFilters.category} allLabel="전체 카테고리" options={categories.map(value=>({value,label:value}))} onChange={value=>setDraftFilters(current=>({...current,category:value}))}/>
+            </>,
+          });
+        })
+        .catch(()=>undefined);
+    },250);
+    return()=>{alive=false;window.clearTimeout(timer);controller.abort()};
+  },[filterOpen,draftFilters,draftActiveCount,categories,debouncedQuery,projectFilter,libraryMode,onOpenFilter]);
 
   const loadVersionHistory=async(deliverableId:string)=>{
     const response=await fetch(`/api/deliverables?deliverableId=${encodeURIComponent(deliverableId)}`,{cache:"no-store"});
@@ -183,7 +247,7 @@ export default function DocumentLibraryWorkspace({project,projects,tasks,initial
 
   return <section className="wv2-module wv2-document-workspace">
     <header className="wv2-module-head">
-      <div><small>DOCUMENT · DELIVERABLE · PREVIEW</small><h1>문서 · 산출물</h1><p>시스템에 실제 등록된 문서와 도면을 확인합니다.</p></div>
+      <div><small>DOCUMENT · DELIVERABLE · PREVIEW</small><h1>문서 · 산출물</h1><p>시스템에 실제 등록된 문서를 빠르게 찾고 확인합니다.</p></div>
       <div className="wv2-module-head-actions"><button disabled={!registrationProject} onClick={()=>void openRegistration("drawing")}><FileText size={18}/>도면 등록</button><button className="primary" disabled={!registrationProject} onClick={()=>void openRegistration("deliverable")}><Upload size={18}/>추가 산출물 등록</button></div>
     </header>
 
@@ -200,18 +264,26 @@ export default function DocumentLibraryWorkspace({project,projects,tasks,initial
       <Suspense fallback={<div className="wv2-preview-empty"><RefreshCw className="wv2-spin" size={24}/><b>미리보기를 여는 중…</b></div>}>
         <DocumentPreviewRenderer projectId={active.projectId} tab={active} item={items.find(item=>item.id===active.deliverableId)} versions={versions.filter(version=>version.deliverableId===active.deliverableId)} onVersion={versionId=>updateTabVersion(active.id,versionId)} onRegisterRevision={registerRevision} viewerRef={viewerRef}/>
       </Suspense>
-      :loading&&!items.length?<div className="wv2-preview-empty"><RefreshCw className="wv2-spin" size={25}/><b>등록 문서를 불러오는 중…</b></div>
-      :<div className="wv2-document-table wv2-preview-document-table">
-        <header><span className="select"><input type="checkbox" checked={Boolean(items.length)&&items.every(item=>selection.has(contextFor(item)))} onChange={()=>items.every(item=>selection.has(contextFor(item)))?selection.clear():items.forEach(item=>{if(!selection.has(contextFor(item)))selection.toggle(contextFor(item))})}/></span><span>산출물</span><span>프로젝트 · WBS</span><span>구분</span><span>Revision</span><span>상태</span><span/></header>
-        {items.map(item=>{const latest=latestFor(item.id),Icon=latest?iconFor(latest.fileName):FileText,drawing=isDrawing(item);return <article key={item.id}>
-          <span className="select"><input type="checkbox" checked={selection.has(contextFor(item))} onChange={()=>selection.toggle(contextFor(item))}/></span>
-          <button className="name" onClick={()=>onOpenDetail?onOpenDetail(item.id):latest&&openPreview(item)}><Icon size={18}/><span><b>{item.name}</b><small>{drawing?`${item.drawingCode||"도면코드"} · ${item.drawingType||"도면"}`:item.type||"일반문서"}</small></span></button>
-          <button className="wv2-document-task" disabled={!item.taskId} onClick={()=>item.taskId&&onOpenTask(item.projectId,item.taskId)}><b>{item.projectCode||"프로젝트 미지정"} · {item.projectName||""}</b><small>{item.taskCode?`${item.taskCode} ${item.taskName||""}`:"WBS 미지정"}</small></button>
-          <em>{drawing?"도면":"문서"}</em>
-          <button className="wv2-revision-link" disabled={!latest} onClick={()=>latest&&openPreview(item)}>{latest?<><b>Rev.{String(latest.revision).padStart(2,"0")}</b><small>{latest.fileName} · {bytes(latest.fileSize)}</small></>:"—"}</button>
-          <span className="wv2-document-status"><i className="submitted">{statusLabel(item.status)}</i></span>
-          <button disabled={!latest} onClick={()=>latest&&openPreview(item)}>미리보기</button>
-        </article>})}
-      </div>}
+      :<>
+        <div className="wv2-module-toolbar">
+          <label><FileText size={18}/><input value={query} onChange={event=>setQuery(event.target.value)} placeholder="프로젝트·산출물명·도면코드·카테고리 검색"/></label>
+          <button className={activeFilterCount?"active":""} onClick={()=>{setDraftFilters({...filters});setFilterOpen(true)}}><Filter size={18}/>상세 필터{activeFilterCount>0&&<em>{activeFilterCount}</em>}</button>
+          <CommonProjectSelector compact projects={projects} value={projectFilter} onChange={setProjectFilter} allLabel="전체 프로젝트"/>
+          <span>{total}개 문서</span>
+        </div>
+        {loading&&!items.length?<div className="wv2-preview-empty"><RefreshCw className="wv2-spin" size={25}/><b>등록 문서를 불러오는 중…</b></div>
+        :<div className="wv2-document-table wv2-preview-document-table">
+          <header><span className="select"><input type="checkbox" checked={Boolean(items.length)&&items.every(item=>selection.has(contextFor(item)))} onChange={()=>items.every(item=>selection.has(contextFor(item)))?selection.clear():items.forEach(item=>{if(!selection.has(contextFor(item)))selection.toggle(contextFor(item))})}/></span><span>산출물</span><span>프로젝트 · WBS</span><span>구분</span><span>Revision</span><span>상태</span><span/></header>
+          {items.map(item=>{const latest=latestFor(item.id),Icon=latest?iconFor(latest.fileName):FileText,drawing=isDrawing(item);return <article key={item.id}>
+            <span className="select"><input type="checkbox" checked={selection.has(contextFor(item))} onChange={()=>selection.toggle(contextFor(item))}/></span>
+            <button className="name" onClick={()=>onOpenDetail?onOpenDetail(item.id):latest&&openPreview(item)}><Icon size={18}/><span><b>{item.name}</b><small>{drawing?`${item.drawingCode||"도면코드"} · ${item.drawingType||"도면"}`:item.type||"일반문서"}</small></span></button>
+            <button className="wv2-document-task" disabled={!item.taskId} onClick={()=>item.taskId&&onOpenTask(item.projectId,item.taskId)}><b>{item.projectCode||"프로젝트 미지정"} · {item.projectName||""}</b><small>{item.taskCode?`${item.taskCode} ${item.taskName||""}`:"WBS 미지정"}</small></button>
+            <em>{drawing?"도면":"문서"}</em>
+            <button className="wv2-revision-link" disabled={!latest} onClick={()=>latest&&openPreview(item)}>{latest?<><b>Rev.{String(latest.revision).padStart(2,"0")}</b><small>{latest.fileName} · {bytes(latest.fileSize)}</small></>:"—"}</button>
+            <span className="wv2-document-status"><i className="submitted">{statusLabel(item.status)}</i></span>
+            <button disabled={!latest} onClick={()=>latest&&openPreview(item)}>미리보기</button>
+          </article>})}
+        </div>}
+      </>}
   </section>;
 }
