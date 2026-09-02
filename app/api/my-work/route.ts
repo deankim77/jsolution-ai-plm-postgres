@@ -256,5 +256,5 @@ export async function GET(request:Request){
     limit,
     offset,
     hasMore:offset+taskResult.results.length<total,
-  },{headers:{"Server-Timing":serverTiming}});
+  });
 }
