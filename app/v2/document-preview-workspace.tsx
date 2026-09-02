@@ -1,6 +1,6 @@
 "use client";
 
-import {Suspense,lazy,useEffect,useState,type ComponentType} from "react";
+import {Suspense,lazy,useState,type ComponentType} from "react";
 import DocumentManagementPanel from "./document-management-panel";
 
 const Impl=lazy(()=>import("./document-preview-workspace-impl").then(module=>({default:module.PreviewDocumentsWorkspace})));
@@ -9,16 +9,11 @@ type LibraryMode="document"|"drawing";
 function DocumentWorkspace(props:any){
   const [libraryMode,setLibraryMode]=useState<LibraryMode>("document");
   const [detailId,setDetailId]=useState("");
-  const [refreshKey,setRefreshKey]=useState(0);
-
-  useEffect(()=>{
-    const refresh=()=>setRefreshKey(value=>value+1);
-    window.addEventListener("v2-deliverables-updated",refresh);
-    return()=>window.removeEventListener("v2-deliverables-updated",refresh);
-  },[]);
 
   return <>
-    <Suspense fallback={null}><Impl key={refreshKey} {...props} libraryMode={libraryMode} onLibraryModeChange={setLibraryMode} onOpenDetail={setDetailId}/></Suspense>
+    <Suspense fallback={null}>
+      <Impl {...props} libraryMode={libraryMode} onLibraryModeChange={setLibraryMode} onOpenDetail={setDetailId}/>
+    </Suspense>
     {detailId&&<DocumentManagementPanel deliverableId={detailId} onClose={()=>setDetailId("")} onOpenTask={(projectId,taskId)=>{setDetailId("");props.onOpenTask?.(projectId,taskId)}}/>}
   </>;
 }
