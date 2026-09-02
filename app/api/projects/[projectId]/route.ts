@@ -1,8 +1,11 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import {canManageProject,contextErrorResponse,requireProjectAccess,resolveRequestContext} from "../../../../db/request-context";
+import {getLegacyDbCompat} from "../../../../db/postgres-d1-compat";
+import {getStorageAdapter} from "../../../../lib/storage-adapter";
+
 type D1={prepare:(sql:string)=>any;batch:(statements:any[])=>Promise<unknown>};
 type R2Bucket={delete:(key:string)=>Promise<unknown>};
-async function runtime(){const runtime=await import("cloudflare:workers");return runtime.env as unknown as {DB:D1;FILES?:R2Bucket};}
+async function runtime(){return {DB:getLegacyDbCompat() as unknown as D1,FILES:getStorageAdapter() as unknown as R2Bucket};}
 async function tableExists(db:D1,name:string){return Boolean(await db.prepare("SELECT name FROM sqlite_master WHERE type='table' AND name=?").bind(name).first())}
 async function columnExists(db:D1,table:string,column:string){if(!(await tableExists(db,table)))return false;const result=await db.prepare(`PRAGMA table_info(${table})`).all();return (result.results??[]).some((row:any)=>String(row.name)===column)}
 
