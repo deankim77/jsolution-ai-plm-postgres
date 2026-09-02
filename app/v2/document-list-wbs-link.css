@@ -46,6 +46,8 @@
 .wv2-preview-document-table>article>.wv2-document-task>small{
   order:2!important;
   color:var(--muted);
+  font-size:12px;
+  font-weight:400!important;
 }
 
 .wv2-preview-document-table>article{position:relative;cursor:pointer}
