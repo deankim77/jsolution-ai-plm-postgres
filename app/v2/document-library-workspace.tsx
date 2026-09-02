@@ -3,7 +3,6 @@
 import {lazy,Suspense,useEffect,useRef,useState} from "react";
 import {FileImage,FileSpreadsheet,FileText,FileType2,Plus,RefreshCw,Upload,X} from "lucide-react";
 import type {V2Project} from "./project-workspaces";
-import {useAiContextSelection} from "./ai-context-selection";
 import type {DocumentPreviewDeliverable,DocumentPreviewTab,DocumentPreviewVersion} from "./document-preview-renderer";
 
 const DocumentPreviewRenderer=lazy(()=>import("./document-preview-renderer"));
@@ -51,7 +50,6 @@ const isDrawing=(item:Deliverable)=>item.documentKind==="drawing";
 const statusLabel=(status:string)=>status==="approved"?"승인":status==="rejected"?"반려":"등록 완료";
 
 export default function DocumentLibraryWorkspace({project,projects,tasks,initialDeliverableId,onInitialOpened,onOpenTask,onAddDeliverable,libraryMode="document",onLibraryModeChange,onOpenDetail,refreshVersion=0}:Props){
-  const selection=useAiContextSelection("문서 · 산출물");
   const [items,setItems]=useState<Deliverable[]>([]);
   const [versions,setVersions]=useState<DeliverableVersion[]>([]);
   const [loading,setLoading]=useState(false);
@@ -170,11 +168,6 @@ export default function DocumentLibraryWorkspace({project,projects,tasks,initial
     }catch(reason){setNotice(reason instanceof Error?reason.message:"Task를 불러오지 못했습니다.")}
   };
 
-  const contextFor=(item:Deliverable)=>{
-    const latest=latestFor(item.id);
-    return {id:item.id,kind:isDrawing(item)?"도면":"문서",title:item.name,meta:`${item.projectCode||"프로젝트 미지정"} · ${item.taskCode||"WBS 미지정"} · ${latest?`Rev.${latest.revision}`:"Revision 없음"}`,fileName:latest?.fileName,revision:latest?.revision,fileAttached:Boolean(latest)};
-  };
-
   const registerRevision=(item:DocumentPreviewDeliverable)=>{
     const target=items.find(row=>row.id===item.id);
     if(target?.taskId){onAddDeliverable(target.projectId,target.taskId,isDrawing(target)?"drawing":"deliverable",target.id);return}
@@ -202,9 +195,9 @@ export default function DocumentLibraryWorkspace({project,projects,tasks,initial
       </Suspense>
       :loading&&!items.length?<div className="wv2-preview-empty"><RefreshCw className="wv2-spin" size={25}/><b>등록 문서를 불러오는 중…</b></div>
       :<div className="wv2-document-table wv2-preview-document-table">
-        <header><span className="select"><input type="checkbox" checked={Boolean(items.length)&&items.every(item=>selection.has(contextFor(item)))} onChange={()=>items.every(item=>selection.has(contextFor(item)))?selection.clear():items.forEach(item=>{if(!selection.has(contextFor(item)))selection.toggle(contextFor(item))})}/></span><span>산출물</span><span>프로젝트 · WBS</span><span>구분</span><span>Revision</span><span>상태</span><span/></header>
+        <header><span className="select"><input type="checkbox" checked={false} disabled readOnly/></span><span>산출물</span><span>프로젝트 · WBS</span><span>구분</span><span>Revision</span><span>상태</span><span/></header>
         {items.map(item=>{const latest=latestFor(item.id),Icon=latest?iconFor(latest.fileName):FileText,drawing=isDrawing(item);return <article key={item.id}>
-          <span className="select"><input type="checkbox" checked={selection.has(contextFor(item))} onChange={()=>selection.toggle(contextFor(item))}/></span>
+          <span className="select"><input type="checkbox" checked={false} disabled readOnly/></span>
           <button className="name" onClick={()=>onOpenDetail?onOpenDetail(item.id):latest&&openPreview(item)}><Icon size={18}/><span><b>{item.name}</b><small>{drawing?`${item.drawingCode||"도면코드"} · ${item.drawingType||"도면"}`:item.type||"일반문서"}</small></span></button>
           <button className="wv2-document-task" disabled={!item.taskId} onClick={()=>item.taskId&&onOpenTask(item.projectId,item.taskId)}><b>{item.projectCode||"프로젝트 미지정"} · {item.projectName||""}</b><small>{item.taskCode?`${item.taskCode} ${item.taskName||""}`:"WBS 미지정"}</small></button>
           <em>{drawing?"도면":"문서"}</em>
