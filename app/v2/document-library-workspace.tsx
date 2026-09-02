@@ -54,6 +54,8 @@ const bytes=(value:number)=>value>=1024*1024?`${(value/1024/1024).toFixed(1)} MB
 const iconFor=(name:string)=>/\.(png|jpe?g|gif|webp|svg)$/i.test(name)?FileImage:/\.xlsx?$/i.test(name)?FileSpreadsheet:/\.(docx?|pdf|pptx?)$/i.test(name)?FileType2:FileText;
 const isDrawing=(item:Deliverable)=>item.documentKind==="drawing";
 const statusLabel=(status:string)=>status==="approved"?"승인":status==="rejected"?"반려":"등록 완료";
+const categoryLabel=(value?:string)=>{const text=(value||"").trim();if(!text)return "카테고리 미지정";const parts=text.split(/\s*(?:>|\/|›|→)\s*/).filter(Boolean);return parts[parts.length-1]||text};
+const formatCreatedAt=(value?:number)=>{if(!value)return "작성일 미상";const date=new Date(value>1_000_000_000_000?value:value*1000);if(Number.isNaN(date.getTime()))return "작성일 미상";const pad=(n:number)=>String(n).padStart(2,"0");return `${date.getFullYear()}-${pad(date.getMonth()+1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}`};
 
 export default function DocumentLibraryWorkspace({project,projects,tasks,initialDeliverableId,onInitialOpened,onOpenTask,onAddDeliverable,onOpenFilter,libraryMode="document",onLibraryModeChange,onOpenDetail,refreshVersion=0}:Props){
   const selection=useAiContextSelection("문서 · 산출물");
@@ -77,6 +79,7 @@ export default function DocumentLibraryWorkspace({project,projects,tasks,initial
   const latestFor=(deliverableId:string)=>versions.find(version=>version.deliverableId===deliverableId);
   const activeFilterCount=Object.values(filters).filter(Boolean).length;
   const draftActiveCount=Object.values(draftFilters).filter(Boolean).length;
+  const matchesQuery=(item:Deliverable,version?:DeliverableVersion,search=debouncedQuery)=>{const key=search.trim().toLowerCase();if(!key)return true;return `${item.name} ${item.type||""} ${item.projectCode||""} ${item.projectName||""} ${item.taskCode||""} ${item.taskName||""} ${item.drawingCode||""} ${version?.fileName||""} ${version?.createdBy||""}`.toLowerCase().includes(key)};
 
   useEffect(()=>{
     const timer=window.setTimeout(()=>setDebouncedQuery(query.trim()),300);
@@ -87,7 +90,6 @@ export default function DocumentLibraryWorkspace({project,projects,tasks,initial
     const controller=new AbortController();
     const started=performance.now();
     const params=new URLSearchParams({documentKind:libraryMode,registration:"completed"});
-    if(debouncedQuery)params.set("q",debouncedQuery);
     if(projectFilter)params.set("projectId",projectFilter);
     if(filters.review)params.set("review",filters.review);
     if(filters.required)params.set("required",filters.required);
@@ -107,12 +109,9 @@ export default function DocumentLibraryWorkspace({project,projects,tasks,initial
         const nextVersions=data.versions??[];
         const registered=(data.deliverables??[]).filter(item=>nextVersions.some(version=>version.deliverableId===item.id));
         registered.sort((a,b)=>(nextVersions.find(version=>version.deliverableId===b.id)?.createdAt??0)-(nextVersions.find(version=>version.deliverableId===a.id)?.createdAt??0));
-        console.info("[DOCUMENT_CLIENT] before-setItems",{count:registered.length,versions:nextVersions.length,at:Math.round(performance.now())});
         setVersions(nextVersions);
         setItems(registered);
-        setTotal(registered.length);
         setCategories(data.categories??[]);
-        queueMicrotask(()=>console.info("[DOCUMENT_CLIENT] after-setItems-microtask",Math.round(performance.now())));
       })
       .catch(reason=>{
         if(reason instanceof DOMException&&reason.name==="AbortError")return;
@@ -123,7 +122,10 @@ export default function DocumentLibraryWorkspace({project,projects,tasks,initial
       })
       .finally(()=>{if(!controller.signal.aborted)setLoading(false)});
     return()=>controller.abort();
-  },[libraryMode,refreshVersion,debouncedQuery,projectFilter,filters]);
+  },[libraryMode,refreshVersion,projectFilter,filters]);
+
+  const visibleItems=items.filter(item=>matchesQuery(item,latestFor(item.id)));
+  useEffect(()=>setTotal(visibleItems.length),[items,versions,debouncedQuery]);
 
   useEffect(()=>{
     if(!filterOpen||!onOpenFilter)return;
@@ -131,7 +133,6 @@ export default function DocumentLibraryWorkspace({project,projects,tasks,initial
     const controller=new AbortController();
     const timer=window.setTimeout(()=>{
       const params=new URLSearchParams({documentKind:libraryMode,registration:"completed"});
-      if(debouncedQuery)params.set("q",debouncedQuery);
       if(projectFilter)params.set("projectId",projectFilter);
       if(draftFilters.review)params.set("review",draftFilters.review);
       if(draftFilters.required)params.set("required",draftFilters.required);
@@ -142,7 +143,7 @@ export default function DocumentLibraryWorkspace({project,projects,tasks,initial
         .then(data=>{
           if(!alive)return;
           const nextVersions=data.versions??[];
-          const resultCount=(data.deliverables??[]).filter(item=>nextVersions.some(version=>version.deliverableId===item.id)).length;
+          const resultCount=(data.deliverables??[]).filter(item=>{const latest=nextVersions.find(version=>version.deliverableId===item.id);return Boolean(latest)&&matchesQuery(item,latest)}).length;
           onOpenFilter({
             eyebrow:"DOCUMENT FILTER",
             title:"문서 · 산출물 상세 필터",
@@ -266,20 +267,20 @@ export default function DocumentLibraryWorkspace({project,projects,tasks,initial
       </Suspense>
       :<>
         <div className="wv2-module-toolbar">
-          <label><FileText size={18}/><input value={query} onChange={event=>setQuery(event.target.value)} placeholder="프로젝트·산출물명·도면코드·카테고리 검색"/></label>
+          <label><FileText size={18}/><input value={query} onChange={event=>setQuery(event.target.value)} placeholder="산출물·카테고리·파일명·프로젝트·WBS·작성자 검색"/></label>
           <button className={activeFilterCount?"active":""} onClick={()=>{setDraftFilters({...filters});setFilterOpen(true)}}><Filter size={18}/>상세 필터{activeFilterCount>0&&<em>{activeFilterCount}</em>}</button>
           <CommonProjectSelector compact projects={projects} value={projectFilter} onChange={setProjectFilter} allLabel="전체 프로젝트"/>
           <span>{total}개 문서</span>
         </div>
         {loading&&!items.length?<div className="wv2-preview-empty"><RefreshCw className="wv2-spin" size={25}/><b>등록 문서를 불러오는 중…</b></div>
         :<div className="wv2-document-table wv2-preview-document-table">
-          <header><span className="select"><input type="checkbox" checked={Boolean(items.length)&&items.every(item=>selection.has(contextFor(item)))} onChange={()=>items.every(item=>selection.has(contextFor(item)))?selection.clear():items.forEach(item=>{if(!selection.has(contextFor(item)))selection.toggle(contextFor(item))})}/></span><span>산출물</span><span>프로젝트 · WBS</span><span>구분</span><span>Revision</span><span>상태</span><span/></header>
-          {items.map(item=>{const latest=latestFor(item.id),Icon=latest?iconFor(latest.fileName):FileText,drawing=isDrawing(item);return <article key={item.id} onClick={()=>onOpenDetail?.(item.id)}>
+          <header><span className="select"><input type="checkbox" checked={Boolean(visibleItems.length)&&visibleItems.every(item=>selection.has(contextFor(item)))} onChange={()=>visibleItems.every(item=>selection.has(contextFor(item)))?selection.clear():visibleItems.forEach(item=>{if(!selection.has(contextFor(item)))selection.toggle(contextFor(item))})}/></span><span>산출물</span><span>프로젝트 · WBS</span><span>작성자 · 작성일</span><span>Revision</span><span>상태</span><span/></header>
+          {visibleItems.map(item=>{const latest=latestFor(item.id),Icon=latest?iconFor(latest.fileName):FileText,drawing=isDrawing(item);return <article key={item.id} onClick={()=>onOpenDetail?.(item.id)}>
             <span className="select"><input type="checkbox" checked={selection.has(contextFor(item))} onClick={event=>event.stopPropagation()} onChange={()=>selection.toggle(contextFor(item))}/></span>
-            <button className="name"><Icon size={18}/><span><b>{item.name}</b><small>{drawing?`${item.drawingCode||"도면코드"} · ${item.drawingType||"도면"}`:item.type||"일반문서"}</small></span></button>
-            <button className="wv2-document-task"><b>{item.projectCode||"프로젝트 미지정"} · {item.projectName||""}</b><small>{item.taskCode?`${item.taskCode} ${item.taskName||""}`:"WBS 미지정"}</small></button>
-            <em>{drawing?"도면":"문서"}</em>
-            <button className="wv2-revision-link">{latest?<><b>Rev.{String(latest.revision).padStart(2,"0")}</b><small>{latest.fileName} · {bytes(latest.fileSize)}</small></>:"—"}</button>
+            <button className="name"><Icon size={18}/><span><b>{item.name}</b><small>{drawing?`${item.drawingCode||"도면코드"} · ${item.drawingType||"도면"}`:categoryLabel(item.type)}</small></span></button>
+            <button className="wv2-document-task"><b>{item.taskName?`${item.taskName}${item.taskCode?` (${item.taskCode})`:""}`:"WBS 미지정"}</b><small>{item.projectName||"프로젝트 미지정"}{item.projectCode?` (${item.projectCode})`:""}</small></button>
+            <span className="wv2-document-author"><b>{latest?.createdBy||"작성자 미상"}</b><small>{formatCreatedAt(latest?.createdAt)}</small></span>
+            <button className="wv2-revision-link">{latest?<><b>Rev.{String(latest.revision).padStart(2,"0")}</b><small>{latest.fileName}</small></>:"—"}</button>
             <span className="wv2-document-status"><i className="submitted">{statusLabel(item.status)}</i></span>
             <button type="button" className="wv2-document-wbs-link" disabled={!item.taskId} onClick={event=>{event.stopPropagation();if(item.taskId)onOpenTask(item.projectId,item.taskId)}}>WBS 이동</button>
             <button type="button" className="wv2-document-preview-link" disabled={!latest} onClick={event=>{event.stopPropagation();if(latest)openPreview(item,latest)}}>미리보기</button>
