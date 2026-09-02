@@ -23,7 +23,9 @@ async function normalizeWorkspaceImpl(){
   const nav='<nav className="wv2-preview-tabs"><button className={activeTab==="library"&&libraryMode==="document"?"active":""} onClick={()=>{setActiveTab("library");onLibraryModeChange?.("document")}}><FileText size={18}/>문서 라이브러리</button><button className={activeTab==="library"&&libraryMode==="drawing"?"active":""} onClick={()=>{setActiveTab("library");onLibraryModeChange?.("drawing")}}><FileText size={18}/>도면 라이브러리</button>{tabs.map(tab=><button key={tab.id} className={activeTab===tab.id?"active":""} onClick={()=>setActiveTab(tab.id)}><span>{tab.title}</span><X size={18} onClick={event=>{event.stopPropagation();closeTab(tab.id)}}/></button>)}<button className="add" onClick={()=>setActiveTab("library")}><Plus size={18}/></button></nav>';
   if(navPattern.test(source))source=source.replace(navPattern,nav);else throw new Error("document workspace tabs not found");
 
-  source=source.replace('onClick={()=>latest&&openPreview(item)}><Icon size={18}/>','onClick={()=>onOpenDetail?onOpenDetail(item.id):latest&&openPreview(item)}><Icon size={18}/>');
+  if(!source.includes('onClick={()=>onOpenDetail?onOpenDetail(item.id):latest&&openPreview(item)}')){
+    source=source.replace('onClick={()=>latest&&openPreview(item)}><Icon size={18}/>','onClick={()=>onOpenDetail?onOpenDetail(item.id):latest&&openPreview(item)}><Icon size={18}/>');
+  }
 
   const oldLoad='const load=useCallback(()=>{if(!workspaceStateReady)return()=>{};const controller=new AbortController();requestKeyRef.current=requestKey;setLoading(true);setLoadingMore(false);loadedHistory.current.clear();historyRequests.current.clear();fetchList(0,controller.signal).then(data=>{setItems(data.deliverables??[]);setVersions(data.versions??[]);setTotal(Number(data.total||0));setRegisteredCount(Number(data.registeredCount||0));setMissingRequiredCount(Number(data.missingRequiredCount||0));setTotalRevisionCount(Number(data.totalRevisionCount||0));setHasMore(Boolean(data.hasMore));setCategories(data.categories??[]);setNotice("")}).catch(reason=>{if(!(reason instanceof DOMException&&reason.name==="AbortError")){setItems([]);setVersions([]);setTotal(0);setRegisteredCount(0);setMissingRequiredCount(0);setTotalRevisionCount(0);setHasMore(false);setNotice(reason instanceof Error?reason.message:"산출물을 불러오지 못했습니다.")}}).finally(()=>{if(!controller.signal.aborted)setLoading(false)});return()=>controller.abort()},[workspaceStateReady,requestKey,fetchList]);';
   const newLoad='const load=useCallback(()=>{if(!workspaceStateReady)return()=>{};const controller=new AbortController();requestKeyRef.current=requestKey;setLoading(true);setLoadingMore(false);loadedHistory.current.clear();historyRequests.current.clear();fetch(`/api/deliverables?${requestKey}`,{cache:"no-store",signal:controller.signal}).then(async response=>{const data=await response.json() as ListResponse;if(!response.ok)throw new Error(data.error||"산출물을 불러오지 못했습니다.");return data}).then(data=>{setItems(data.deliverables??[]);setVersions(data.versions??[]);setTotal(Number(data.total||0));setRegisteredCount(Number(data.registeredCount||0));setMissingRequiredCount(Number(data.missingRequiredCount||0));setTotalRevisionCount(Number(data.totalRevisionCount||0));setHasMore(Boolean(data.hasMore));setCategories(data.categories??[]);setNotice("")}).catch(reason=>{if(!(reason instanceof DOMException&&reason.name==="AbortError")){setItems([]);setVersions([]);setTotal(0);setRegisteredCount(0);setMissingRequiredCount(0);setTotalRevisionCount(0);setHasMore(false);setNotice(reason instanceof Error?reason.message:"산출물을 불러오지 못했습니다.")}}).finally(()=>{if(!controller.signal.aborted)setLoading(false)});return()=>controller.abort()},[workspaceStateReady,requestKey]);';
@@ -39,11 +41,19 @@ async function normalizeDeliverableList(){
   await write(path,source);
 }
 
+function ensureImport(source,line,after){
+  if(source.includes(line))return source;
+  if(!source.includes(after))throw new Error(`import anchor not found: ${after}`);
+  return source.replace(after,`${after}\n${line}`);
+}
+
 async function normalizeDeliverableLinks(){
   const path="app/api/projects/[projectId]/deliverable-links/route.ts";
   let source=await read(path);
-  source=source.replace('import {contextErrorResponse,requireProjectAccess,resolveRequestContext} from "../../../../../db/request-context";','import {contextErrorResponse,requireProjectAccess,resolveRequestContext} from "../../../../../db/request-context";\nimport {getLegacyDbCompat} from "../../../../../db/postgres-d1-compat";\nimport {getStorageAdapter} from "../../../../../lib/storage-adapter";');
-  source=source.replace(/type R2Object=.*?async function runtime\(\)\{const runtime=await import\("cloudflare:workers"\);return runtime\.env as unknown as \{DB:D1;FILES\?:R2Bucket\};\}\n/s,'type R2Object={body:ReadableStream;httpMetadata?:{contentType?:string};customMetadata?:Record<string,string>};\ntype R2Bucket={put:(key:string,value:ReadableStream|ArrayBuffer|Blob|string,options?:any)=>Promise<unknown>;get:(key:string)=>Promise<R2Object|null>;delete:(key:string)=>Promise<unknown>};\nasync function runtime(){return {DB:getLegacyDbCompat() as unknown as D1,FILES:getStorageAdapter() as unknown as R2Bucket};}\n');
+  const anchor='import {contextErrorResponse,requireProjectAccess,resolveRequestContext} from "../../../../../db/request-context";';
+  source=ensureImport(source,'import {getLegacyDbCompat} from "../../../../../db/postgres-d1-compat";',anchor);
+  source=ensureImport(source,'import {getStorageAdapter} from "../../../../../lib/storage-adapter";',anchor);
+  source=source.replace('async function runtime(){const runtime=await import("cloudflare:workers");return runtime.env as unknown as {DB:D1;FILES?:R2Bucket};}','async function runtime(){return {DB:getLegacyDbCompat() as unknown as D1,FILES:getStorageAdapter() as unknown as R2Bucket};}');
   if(source.includes('cloudflare:workers'))throw new Error("deliverable-links still contains cloudflare runtime");
   await write(path,source);
 }
@@ -51,8 +61,10 @@ async function normalizeDeliverableLinks(){
 async function normalizeDwgConversionResult(){
   const path="app/api/projects/[projectId]/dwg-conversion-result/route.ts";
   let source=await read(path);
-  source=source.replace('import {contextErrorResponse,requireProjectAccess,resolveRequestContext} from "../../../../../db/request-context";','import {contextErrorResponse,requireProjectAccess,resolveRequestContext} from "../../../../../db/request-context";\nimport {getLegacyDbCompat} from "../../../../../db/postgres-d1-compat";\nimport {getStorageAdapter} from "../../../../../lib/storage-adapter";');
-  source=source.replace(/type R2Bucket=.*?async function runtime\(\)\{const runtime=await import\("cloudflare:workers"\);return runtime\.env as unknown as \{DB:D1;FILES\?:R2Bucket\};\}\n/s,'type R2Bucket={put:(key:string,value:ReadableStream|ArrayBuffer|Blob|string,options?:any)=>Promise<unknown>};\nasync function runtime(){return {DB:getLegacyDbCompat() as unknown as D1,FILES:getStorageAdapter() as unknown as R2Bucket};}\n');
+  const anchor='import {contextErrorResponse,requireProjectAccess,resolveRequestContext} from "../../../../../db/request-context";';
+  source=ensureImport(source,'import {getLegacyDbCompat} from "../../../../../db/postgres-d1-compat";',anchor);
+  source=ensureImport(source,'import {getStorageAdapter} from "../../../../../lib/storage-adapter";',anchor);
+  source=source.replace('async function runtime(){const runtime=await import("cloudflare:workers");return runtime.env as unknown as {DB:D1;FILES?:R2Bucket};}','async function runtime(){return {DB:getLegacyDbCompat() as unknown as D1,FILES:getStorageAdapter() as unknown as R2Bucket};}');
   if(source.includes('cloudflare:workers'))throw new Error("dwg-conversion-result still contains cloudflare runtime");
   await write(path,source);
 }
