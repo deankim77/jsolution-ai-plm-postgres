@@ -59,6 +59,7 @@ export default function DocumentLibraryWorkspace({project,projects,tasks,initial
   const [tabs,setTabs]=useState<DocumentPreviewTab[]>([]);
   const [activeTab,setActiveTab]=useState("library");
   const viewerRef=useRef<HTMLDivElement|null>(null);
+  const handledInitialDeliverableRef=useRef("");
 
   const latestFor=(deliverableId:string)=>versions.find(version=>version.deliverableId===deliverableId);
 
@@ -132,14 +133,16 @@ export default function DocumentLibraryWorkspace({project,projects,tasks,initial
   },[items,versions]);
 
   useEffect(()=>{
-    if(!initialDeliverableId||!items.length)return;
+    if(!initialDeliverableId){handledInitialDeliverableRef.current="";return}
+    if(!items.length||handledInitialDeliverableRef.current===initialDeliverableId)return;
     const item=items.find(row=>row.id===initialDeliverableId);
     if(!item)return;
+    handledInitialDeliverableRef.current=initialDeliverableId;
     const latest=latestFor(item.id);
     if(latest)openPreview(item,latest);
     else void loadVersionHistory(item.id).then(history=>openPreview(item,history[0]));
     onInitialOpened?.();
-  },[initialDeliverableId,items,versions]);
+  },[initialDeliverableId,items]);
 
   const closeTab=(id:string)=>{
     setTabs(current=>current.filter(tab=>tab.id!==id));
