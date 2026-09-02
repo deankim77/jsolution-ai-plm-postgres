@@ -1,5 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import {canManageProject,contextErrorResponse,requireProjectAccess,resolveRequestContext} from "../../../../../db/request-context";
+import {getLegacyDbCompat} from "../../../../../db/postgres-d1-compat";
 import {getStorageAdapter} from "../../../../../lib/storage-adapter";
 type D1={prepare:(sql:string)=>any;batch:(statements:any[])=>Promise<unknown>};
 type R2Object={body:ReadableStream;httpMetadata?:{contentType?:string};customMetadata?:Record<string,string>};

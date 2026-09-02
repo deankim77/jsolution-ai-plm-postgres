@@ -26,7 +26,7 @@ export async function GET(request:Request,{params}:{params:Promise<{projectId:st
     (SELECT COUNT(*) FROM deliverables o JOIN wbs_tasks s ON s.id=o.task_id WHERE o.project_id=w.project_id AND s.parent_id=w.parent_id AND o.required=1 AND o.status NOT IN ('approved','completed')) AS missingRequiredDeliverables,
     (SELECT COUNT(*) FROM project_issues i JOIN wbs_tasks s ON s.id=i.task_id WHERE i.project_id=w.project_id AND s.parent_id=w.parent_id AND i.status NOT IN ('resolved','closed','completed')) AS openGateIssues
     FROM wbs_tasks w
-    LEFT JOIN project_gate_decisions d ON d.id=(SELECT d2.id FROM project_gate_decisions d2 WHERE d2.project_id=w.project_id AND d2.gate_task_id=w.id ORDER BY d2.decided_at DESC,d2.rowid DESC LIMIT 1)
+    LEFT JOIN project_gate_decisions d ON d.id=(SELECT d2.id FROM project_gate_decisions d2 WHERE d2.project_id=w.project_id AND d2.gate_task_id=w.id ORDER BY d2.decided_at DESC,d2.id DESC LIMIT 1)
     LEFT JOIN users u ON u.id=d.decided_by
     WHERE w.project_id=? AND w.task_type='gate' ORDER BY w.sort_order`).bind(projectId).all();
   return Response.json({gates:(rows.results??[]).map((row:any)=>({...row,gateCode:normalizeGateCode(row.gateCode)}))});
