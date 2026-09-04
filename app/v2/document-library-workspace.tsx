@@ -5,6 +5,7 @@ import {FileImage,FileSpreadsheet,FileText,FileType2,Filter,Plus,RefreshCw,Uploa
 import type {V2Project} from "./project-workspaces";
 import {useAiContextSelection} from "./ai-context-selection";
 import {CommonProjectSelector} from "./common-project-selector";
+import {drawingTypeLabel} from "./drawing-type-label";
 import {FilterChipGroup,FilterSection,FilterSelect,type WorkspaceFilterConfig} from "./workspace-filter-panel";
 import type {DocumentPreviewDeliverable,DocumentPreviewTab,DocumentPreviewVersion} from "./document-preview-renderer";
 
@@ -279,7 +280,7 @@ export default function DocumentLibraryWorkspace({project,projects,tasks,initial
           <header><span className="select"><input type="checkbox" checked={Boolean(visibleItems.length)&&visibleItems.every(item=>selection.has(contextFor(item)))} onChange={()=>visibleItems.every(item=>selection.has(contextFor(item)))?selection.clear():visibleItems.forEach(item=>{if(!selection.has(contextFor(item)))selection.toggle(contextFor(item))})}/></span><span>산출물</span><span>프로젝트 · WBS</span><span>작성자 · 작성일</span><span>Revision</span><span>상태</span><span/></header>
           {visibleItems.map(item=>{const latest=latestFor(item.id),Icon=latest?iconFor(latest.fileName):FileText,drawing=isDrawing(item);return <article key={item.id} onClick={()=>onOpenDetail?.(item.id)}>
             <span className="select"><input type="checkbox" checked={selection.has(contextFor(item))} onClick={event=>event.stopPropagation()} onChange={()=>selection.toggle(contextFor(item))}/></span>
-            <button className="name"><Icon size={18}/><span><b>{item.name}</b><small>{drawing?`${item.drawingCode||"도면코드"} · ${item.drawingType||"도면"}`:categoryLabel(item.type)}</small></span></button>
+            <button className="name"><Icon size={18}/><span><b>{item.name}</b><small>{drawing?`${item.drawingCode||"도면코드"} · ${drawingTypeLabel(item.drawingType)}`:categoryLabel(item.type)}</small></span></button>
             <button className="wv2-document-task"><b>{item.projectName||"프로젝트 미지정"}{item.projectCode?` · ${item.projectCode}`:""}</b><small>{item.taskName?`${item.taskName}${item.taskCode?` · ${item.taskCode}`:""}`:"WBS 미지정"}</small></button>
             <span className="wv2-document-author"><b>{latest?.createdBy||"작성자 미상"}</b><small>{formatCreatedAt(latest?.createdAt)}</small></span>
             <button className="wv2-revision-link">{latest?<><b>Rev.{String(latest.revision).padStart(2,"0")}</b><small>{latest.fileName}</small></>:"—"}</button>
