@@ -7,7 +7,7 @@ const lazyNamed=(loader:()=>Promise<{default:ComponentType<any>}>)=>{
   return (props:any)=><Suspense fallback={null}><Component {...props}/></Suspense>;
 };
 
-const ConnectedAiPanelImpl=lazyNamed(()=>import("./connected-ai-workspaces-impl").then(module=>({default:module.ConnectedAiPanel})));
+const ConnectedAiPanelImpl=lazyNamed(()=>import("./connected-ai-panel").then(module=>({default:module.ConnectedAiPanel})));
 
 export const ConnectedAiPanel=(props:any)=>{
   const draft=props.draftRequest;
