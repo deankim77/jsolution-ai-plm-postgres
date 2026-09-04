@@ -67,6 +67,7 @@ export default function DocumentPreviewOverlayBridge(){
     if(!tabs||!content)return false;
     let tab=tabs.querySelector<HTMLElement>(":scope > .document-central-tab-host");
     if(!tab){tab=document.createElement("div");tab.className="document-central-tab-host";tabs.appendChild(tab)}
+    else if(tab!==tabs.lastElementChild)tabs.appendChild(tab);
     let panel=content.querySelector<HTMLElement>(":scope > .document-central-content-host");
     if(!panel){panel=document.createElement("div");panel.className="document-central-content-host";content.appendChild(panel)}
     setTabHost(tab);setContentHost(panel);return true;
