@@ -38,7 +38,7 @@ export const ProjectMembersMasterDialog=lazyNamed(()=>import("./project-members-
 export const AdvancedGanttView=lazyNamed(()=>import("./advanced-gantt-view").then(module=>({default:module.AdvancedGanttView})));
 export const AdvancedWbsEditor=lazyNamed(()=>import("./advanced-wbs-editor").then(module=>({default:module.AdvancedWbsEditor})));
 export const ArtifactPreviewView=lazyNamed(()=>import("../artifact-preview-view").then(module=>({default:module.default})));
-export const WorkPanel=lazyNamed(()=>import("./work-panel-ai-context").then(module=>({default:module.WorkPanel})));
+export const WorkPanel=lazyNamed(()=>import("./work-panel").then(module=>({default:module.WorkPanel})));
 export const ListView=lazyNamed(()=>import("./wbs-inline-views").then(module=>({default:module.ListView})));
 export const TimelineView=lazyNamed(()=>import("./wbs-inline-views").then(module=>({default:module.TimelineView})));
 export const KanbanView=lazyNamed(()=>import("./wbs-inline-views").then(module=>({default:module.KanbanView})));
