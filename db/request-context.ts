@@ -14,7 +14,8 @@ export async function resolveRequestContext(request:Request,db:ContextDb,identit
   const requestedUserId=identity?.userId?.trim()||request.headers.get("x-user-id")?.trim();
   const requestedCompanyId=request.headers.get("x-company-id")?.trim();
   const requestedEmail=(identity?.email||request.headers.get("oai-authenticated-user-email")||request.headers.get("cf-access-authenticated-user-email")||request.headers.get("x-user-email"))?.trim().toLowerCase();
-  const url=new URL(request.url);const development=["localhost","127.0.0.1"].includes(url.hostname);
+  const url=new URL(request.url);
+  const development=["localhost","127.0.0.1"].includes(url.hostname)||process.env.ALLOW_DEV_USER_FALLBACK==="true";
   let user:any=null;
   if(requestedUserId){user=await db.prepare("SELECT id,company_id AS companyId,email,name,status FROM users WHERE id=?").bind(requestedUserId).first()}
   else if(requestedEmail){user=await db.prepare("SELECT id,company_id AS companyId,email,name,status FROM users WHERE lower(email)=?").bind(requestedEmail).first()}
