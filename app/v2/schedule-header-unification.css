@@ -41,36 +41,28 @@
   font-size:var(--v2-font-size-table-header) !important;
   font-weight:700 !important;
 }
-/* Timeline guide lines: keep the header readable and the row grid lighter. */
-.wv2-months>i{opacity:.92}
-.wv2-timeline>button>i{opacity:.72}
+
+/* Timeline month scale: strong month boundaries, very quiet weekly helper lines. */
+.wv2-timeline-shell .wv2-months>i[style*="#cbd5dc"],
+.wv2-timeline-shell .wv2-timeline>button>i[style*="#cbd5dc"]{
+  border-left-color:#cfd8df !important;
+}
+.wv2-timeline-shell .wv2-months>i[style*="#e7edf1"],
+.wv2-timeline-shell .wv2-timeline>button>i[style*="#e7edf1"]{
+  border-left-color:#f1f4f6 !important;
+}
+.wv2-timeline-shell .wv2-months>i[style*="#eef2f5"],
+.wv2-timeline-shell .wv2-timeline>button>i[style*="#eef2f5"]{
+  border-left-color:#f4f6f8 !important;
+}
 
 /* Gantt: use the exact same header palette / typography. */
-.wv2-advanced-gantt{
-  height:100%;
-  min-height:0;
-  display:flex;
-  flex-direction:column;
-  overflow:hidden;
-}
-.wv2-gantt-command,
-.wv2-gantt-notice,
-.wv2-gantt-proposal{
-  flex:0 0 auto;
-}
-.wv2-advanced-gantt-grid{
-  flex:1 1 auto;
-  min-height:0;
-  overflow-x:hidden !important;
-  overflow-y:auto !important;
-  overscroll-behavior:contain;
-}
 .wv2-gantt-task-list>header,
 .wv2-gantt-time>header{
   position:sticky !important;
   top:0 !important;
   height:44px !important;
-  z-index:9 !important;
+  z-index:8 !important;
   box-sizing:border-box;
   background:#f5f8fa !important;
   border-bottom:1px solid var(--line) !important;
@@ -92,8 +84,26 @@
 }
 
 /* Keep the WBS pane visually stable while the schedule body scrolls vertically. */
+.wv2-advanced-gantt{
+  min-height:0 !important;
+  height:100% !important;
+  display:flex !important;
+  flex-direction:column !important;
+  overflow:hidden !important;
+}
+.wv2-advanced-gantt-grid{
+  min-height:0 !important;
+  flex:1 1 auto !important;
+  overflow-x:hidden !important;
+  overflow-y:auto !important;
+}
 .wv2-gantt-task-list{
   position:relative;
   z-index:5;
   background:#fff;
+}
+
+/* Timeline helper lines should remain subordinate to month/week boundaries. */
+.wv2-timeline>button>i{
+  opacity:.82;
 }
