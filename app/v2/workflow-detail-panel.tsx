@@ -1,6 +1,6 @@
 "use client";
 import {useEffect,useRef,useState} from "react";
-import {Check,ChevronDown,ChevronRight,Clock3,FileText,PanelRightClose,PanelRightOpen,Pencil,RefreshCw,ShieldCheck,Trash2,Upload,X} from "lucide-react";
+import {Check,ChevronRight,Clock3,FileText,PanelRightClose,PanelRightOpen,Pencil,RefreshCw,ShieldCheck,Trash2,Upload,X} from "lucide-react";
 import {useAiContextSelection} from "./ai-context-selection";
 import "./workflow-detail-panel-v2.css";
 
@@ -48,7 +48,6 @@ export function WorkflowDetailPanel({id,onClose,onChanged,onOpenDocuments,onEdit
         {!["approved","rejected"].includes(w.status)&&canAct&&<section className="action wv2-current-step-action"><h3>{currentNumber}. {current?.name||"현재 단계"} · {actionLabels[current?.action_type]||"처리"}</h3><textarea rows={3} value={comment} onChange={event=>setComment(event.target.value)} placeholder={current?.comment_required?"처리 의견을 반드시 입력하세요.":"처리 의견을 입력하세요."}/><div>{["draft","supplement","recalled"].includes(w.status)?<button className="primary" disabled={saving} onClick={()=>act(w.status==="supplement"?"RESUBMIT":"SUBMIT")}>결재 요청</button>:<><button className="primary" disabled={saving} onClick={()=>act(current?.action_type||"COMPLETE")}>{actionLabels[current?.action_type]||"처리"}</button><button disabled={saving} onClick={()=>act("SUPPLEMENT")}>보완 요청</button><button className="danger" disabled={saving} onClick={()=>act("REJECT")}>반려</button>{data.permissions?.isRequester&&<button disabled={saving} onClick={()=>act("RECALL")}>회수</button>}</>}</div></section>}
         {!canAct&&!["approved","rejected"].includes(w.status)&&<p className="wv2-workflow-readonly">현재 단계 담당자만 처리 의견을 등록할 수 있습니다.</p>}
         {w.official_document_id&&w.main_deliverable_id&&<button className="wv2-approved-document" onClick={()=>onOpenDocuments(w.main_deliverable_id)}><ShieldCheck size={20}/><span><b>승인문서 보기</b><small>{w.officialDocumentTitle||w.mainDocumentName} · 최종 Revision</small></span><ChevronRight size={18}/></button>}
-        <details className="wv2-workflow-audit-history"><summary><span>상세 처리 이력 {history.length}건</span><ChevronDown size={16}/></summary><div>{history.map((item:any)=><article key={item.id}><span/><div><b>{item.actorName} · {item.action}</b><small>{item.stepName||"Workflow"} · {fmtDateTime(item.created_at)}</small>{item.comment&&<p>{item.comment}</p>}</div></article>)}</div></details>
       </>}
       {sectionTab==="request"&&<RequestInformation sourceType={sourceType} sourceInfo={sourceInfo} workflow={w} attachments={sourceAttachments}/>} 
       {sectionTab==="documents"&&<>
