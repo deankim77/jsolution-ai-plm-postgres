@@ -1,0 +1,81 @@
+/* Shared schedule header / freeze-pane treatment for Timeline and Gantt. */
+
+/* Timeline: keep the time-axis header visible while the WBS rows scroll. */
+.wv2-timeline-scroll{
+  overflow-x:hidden;
+  overflow-y:auto;
+}
+.wv2-months{
+  position:sticky !important;
+  top:0 !important;
+  z-index:8 !important;
+  height:44px !important;
+  box-sizing:border-box;
+  background:#f5f8fa !important;
+  border-bottom:1px solid var(--line) !important;
+  color:#647487 !important;
+  font-size:var(--v2-font-size-table-header) !important;
+  font-weight:700 !important;
+}
+.wv2-months::before{
+  height:44px !important;
+  box-sizing:border-box;
+  display:flex !important;
+  align-items:center !important;
+  background:#f5f8fa !important;
+  border-right:1px solid var(--line) !important;
+  border-bottom:1px solid var(--line) !important;
+  color:#647487 !important;
+  font-size:var(--v2-font-size-table-header) !important;
+  font-weight:800 !important;
+  padding:0 10px !important;
+}
+.wv2-months>span{
+  top:0 !important;
+  height:44px !important;
+  display:flex !important;
+  align-items:center !important;
+  justify-content:center !important;
+  padding:0 !important;
+  color:#647487 !important;
+  font-size:var(--v2-font-size-table-header) !important;
+  font-weight:700 !important;
+}
+
+/* Gantt: use the exact same header palette / typography. */
+.wv2-gantt-task-list>header,
+.wv2-gantt-time>header{
+  position:sticky !important;
+  top:0 !important;
+  height:44px !important;
+  z-index:8 !important;
+  box-sizing:border-box;
+  background:#f5f8fa !important;
+  border-bottom:1px solid var(--line) !important;
+  color:#647487 !important;
+  font-size:var(--v2-font-size-table-header) !important;
+}
+.wv2-gantt-task-list>header{
+  font-weight:800 !important;
+}
+.wv2-gantt-time>header span{
+  top:0 !important;
+  height:44px !important;
+  display:flex !important;
+  align-items:center !important;
+  justify-content:center !important;
+  color:#647487 !important;
+  font-size:var(--v2-font-size-table-header) !important;
+  font-weight:700 !important;
+}
+
+/* Keep the WBS pane visually stable while the schedule body scrolls vertically. */
+.wv2-advanced-gantt-grid{
+  overflow-x:hidden !important;
+  overflow-y:auto !important;
+}
+.wv2-gantt-task-list{
+  position:relative;
+  z-index:5;
+  background:#fff;
+}
