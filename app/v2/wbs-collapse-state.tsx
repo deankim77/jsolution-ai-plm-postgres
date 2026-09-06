@@ -33,7 +33,7 @@ export function filterCollapsedWbs<T extends WbsHierarchyItem>(tasks:T[],collaps
   return output;
 }
 
-const actionStyle:CSSProperties={display:"inline-flex",height:26,alignItems:"center",gap:4,border:"1px solid #d6dee3",borderRadius:5,background:"#fff",padding:"0 7px",color:"#52626d",fontSize:11,fontWeight:700,whiteSpace:"nowrap"};
+const actionStyle:CSSProperties={display:"inline-flex",height:30,alignItems:"center",gap:6,border:"1px solid var(--line)",borderRadius:5,background:"#fff",padding:"0 10px",color:"#50616a",fontSize:"var(--v2-font-size-control)",fontWeight:700,whiteSpace:"nowrap"};
 
 export function WbsHierarchyControls({collapseAll,expandAll}:{collapseAll:()=>void;expandAll:()=>void}){
   const [slot,setSlot]=useState<HTMLElement|null>(null);
@@ -55,7 +55,7 @@ export function WbsHierarchyControls({collapseAll,expandAll}:{collapseAll:()=>vo
     return()=>{if(mount?.isConnected&&mount.childElementCount===0)mount.remove()};
   },[]);
   if(!slot)return null;
-  return createPortal(<><button type="button" title="모든 WBS 그룹 접기" style={actionStyle} onClick={event=>{event.stopPropagation();collapseAll()}}><ChevronsUp size={14}/>모두 접기</button><button type="button" title="모든 WBS 그룹 펼치기" style={actionStyle} onClick={event=>{event.stopPropagation();expandAll()}}><ChevronsDown size={14}/>모두 펼치기</button></>,slot);
+  return createPortal(<><button type="button" title="모든 WBS 그룹 접기" style={actionStyle} onClick={event=>{event.stopPropagation();collapseAll()}}><ChevronsUp size={18}/>모두 접기</button><button type="button" title="모든 WBS 그룹 펼치기" style={actionStyle} onClick={event=>{event.stopPropagation();expandAll()}}><ChevronsDown size={18}/>모두 펼치기</button></>,slot);
 }
 
 export function WbsCollapseChevron({collapsed,size=16}:{collapsed:boolean;size?:number}){return collapsed?<ChevronRight size={size}/>:<ChevronDown size={size}/>}
