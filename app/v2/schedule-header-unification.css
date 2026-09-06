@@ -41,14 +41,36 @@
   font-size:var(--v2-font-size-table-header) !important;
   font-weight:700 !important;
 }
+/* Timeline guide lines: keep the header readable and the row grid lighter. */
+.wv2-months>i{opacity:.92}
+.wv2-timeline>button>i{opacity:.72}
 
 /* Gantt: use the exact same header palette / typography. */
+.wv2-advanced-gantt{
+  height:100%;
+  min-height:0;
+  display:flex;
+  flex-direction:column;
+  overflow:hidden;
+}
+.wv2-gantt-command,
+.wv2-gantt-notice,
+.wv2-gantt-proposal{
+  flex:0 0 auto;
+}
+.wv2-advanced-gantt-grid{
+  flex:1 1 auto;
+  min-height:0;
+  overflow-x:hidden !important;
+  overflow-y:auto !important;
+  overscroll-behavior:contain;
+}
 .wv2-gantt-task-list>header,
 .wv2-gantt-time>header{
   position:sticky !important;
   top:0 !important;
   height:44px !important;
-  z-index:8 !important;
+  z-index:9 !important;
   box-sizing:border-box;
   background:#f5f8fa !important;
   border-bottom:1px solid var(--line) !important;
@@ -70,10 +92,6 @@
 }
 
 /* Keep the WBS pane visually stable while the schedule body scrolls vertically. */
-.wv2-advanced-gantt-grid{
-  overflow-x:hidden !important;
-  overflow-y:auto !important;
-}
 .wv2-gantt-task-list{
   position:relative;
   z-index:5;
