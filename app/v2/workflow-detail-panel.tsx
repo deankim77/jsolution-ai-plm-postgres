@@ -31,15 +31,16 @@ export function WorkflowDetailPanel({id,onClose,onChanged,onOpenDocuments,onEdit
   const act=async(action:string)=>{setSaving(true);setError("");try{await fetch(`/api/workflows/${id}`,{method:"PATCH",headers:{"content-type":"application/json"},body:JSON.stringify({action,comment})}).then(json);setComment("");load();onChanged()}catch(reason){setError(reason instanceof Error?reason.message:"처리하지 못했습니다.")}finally{setSaving(false)}};
   const removeDraft=async()=>{setSaving(true);setError("");try{await fetch(`/api/workflows/${id}`,{method:"DELETE"}).then(json);onDeleted?.();onClose()}catch(reason){setError(reason instanceof Error?reason.message:"임시저장 Workflow를 삭제하지 못했습니다.")}finally{setSaving(false)}};
   const resetRevision=()=>{setRevisionTarget("");setRevisionNote("");setFile(null);setDragging(false);if(inputRef.current)inputRef.current.value=""};
-  if(loading)return <aside className="wv2-workflow-detail wide"><div className="wv2-panel-loading"><RefreshCw size={30}/><b>Workflow 상세를 불러오는 중…</b></div></aside>;
-  if(!data)return <aside className="wv2-workflow-detail wide"><header><div><small>WORKFLOW DETAIL</small><h2>상세정보를 불러오지 못했습니다.</h2></div><div className="panel-tools"><button aria-label="다시 시도" onClick={load}><RefreshCw size={18}/></button><button aria-label="닫기" onClick={onClose}><X size={18}/></button></div></header><main><p className="wv2-workflow-error">{error||"잠시 후 다시 시도해 주세요."}</p></main></aside>;
+  if(loading)return <aside className="wv2-panel wide"><div className="wv2-panel-loading"><RefreshCw size={30}/><b>Workflow 상세를 불러오는 중…</b></div></aside>;
+  if(!data)return <aside className="wv2-panel wide"><header><div><small>WORKFLOW DETAIL</small><h2>상세정보를 불러오지 못했습니다.</h2><span>{error||"잠시 후 다시 시도해 주세요."}</span></div><div><button aria-label="다시 시도" onClick={load}><RefreshCw size={18}/></button><button aria-label="닫기" onClick={onClose}><X size={18}/></button></div></header></aside>;
   const w=data.workflow,steps=data.steps??[],history=data.history??[],documents=data.documents??[],linkedDocuments=data.linkedDocuments??[],sourceAttachments=data.sourceAttachments??[],sourceInfo=data.sourceInfo??null,current=steps.find((step:any)=>Number(step.step_order)===Number(w.current_step_order)),canAct=Boolean(data.permissions?.canAct),canManageDraft=w.status==="draft"&&Boolean(data.permissions?.isRequester||data.permissions?.isAdmin),sourceType=String(w.source_type||"GENERAL").toUpperCase();
   const upload=async()=>{if(!file||!revisionTarget)return;setSaving(true);setError("");try{const body=new FormData();body.set("file",file);body.set("deliverableId",revisionTarget);body.set("note",revisionNote.trim());await fetch(`/api/workflows/${id}`,{method:"POST",body}).then(json);resetRevision();load();onChanged()}catch(reason){setError(reason instanceof Error?reason.message:"Revision을 등록하지 못했습니다.")}finally{setSaving(false)}};
   const currentNumber=Number(w.current_step_order||0)+1,totalSteps=steps.length;
-  return <aside className={`wv2-workflow-detail${wide?" wide":""}`}>
-    <header><div><small>{w.workflow_number}</small><h2>{w.title}</h2><p>{w.projectCode} · {w.projectName}</p></div><div className="panel-tools"><button aria-label={wide?"기본 너비":"넓게 보기"} onClick={()=>setWide(value=>!value)}>{wide?<PanelRightOpen size={18}/>:<PanelRightClose size={18}/>}</button><button aria-label="닫기" onClick={onClose}><X size={18}/></button></div></header>
-    <nav className="wv2-workflow-detail-tabs"><button className={sectionTab==="workflow"?"active":""} onClick={()=>setSectionTab("workflow")}>워크플로우</button><button className={sectionTab==="request"?"active":""} onClick={()=>setSectionTab("request")}>요청정보</button><button className={sectionTab==="documents"?"active":""} onClick={()=>setSectionTab("documents")}>문서·산출물 <em>{linkedDocuments.length+sourceAttachments.length}</em></button></nav>
-    <main>
+  return <aside className={`wv2-panel${wide?" wide":""}`}>
+    <div className="wv2-resize"/>
+    <header><div><small>{w.workflow_number}</small><h2>{w.title}</h2><span>{w.projectCode} · {w.projectName}</span></div><div><button aria-label={wide?"기본 너비":"넓게 보기"} onClick={()=>setWide(value=>!value)}>{wide?<PanelRightOpen size={18}/>:<PanelRightClose size={18}/>}</button><button aria-label="닫기" onClick={onClose}><X size={18}/></button></div></header>
+    <nav><button className={sectionTab==="workflow"?"active":""} onClick={()=>setSectionTab("workflow")}>워크플로우</button><button className={sectionTab==="request"?"active":""} onClick={()=>setSectionTab("request")}>요청정보</button><button className={sectionTab==="documents"?"active":""} onClick={()=>setSectionTab("documents")}>문서·산출물</button></nav>
+    <section className="wv2-panel-body wv2-workflow-panel-content">
       {sectionTab==="workflow"&&<>
         <section className="wv2-workflow-quick-status"><span className={`status ${w.status}`}>{statusLabels[w.status]||w.status}</span><b>현재 {currentNumber}/{totalSteps} · {current?.name||"단계 미정"}</b><span>담당 {current?.assigneeName||"미배정"}</span><span>기한 {w.due_date||"미정"}</span></section>
         {canManageDraft&&<section className="wv2-draft-management compact"><div><b>임시저장 관리</b><small>결재 요청 전까지 수정·삭제할 수 있습니다.</small></div><div>{onEdit&&<button onClick={()=>onEdit(w.source_id||w.id)}><Pencil size={17}/>정보 수정</button>}{deleteConfirm?<><button onClick={()=>setDeleteConfirm(false)}>취소</button><button className="danger" disabled={saving} onClick={removeDraft}><Trash2 size={17}/>{saving?"삭제 중…":"삭제 확인"}</button></>:<button className="danger" onClick={()=>setDeleteConfirm(true)}><Trash2 size={17}/>삭제</button>}</div></section>}
@@ -55,7 +56,7 @@ export function WorkflowDetailPanel({id,onClose,onChanged,onOpenDocuments,onEdit
         {sourceAttachments.length>0&&<section className="wv2-source-attachment-list"><h3>요청 첨부문서</h3>{sourceAttachments.map((item:any)=><a key={item.id} href={`/api/workflows/source-attachments?attachmentId=${item.id}`}><FileText size={18}/><span><b>{item.fileName}</b><small>{Math.max(1,Math.ceil(Number(item.fileSize||0)/1024)).toLocaleString()} KB · 요청 등록</small></span></a>)}</section>}
       </>}
       {error&&<p className="wv2-workflow-error">{error}</p>}
-    </main>
+    </section>
   </aside>;
 }
 
