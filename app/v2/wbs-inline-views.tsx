@@ -30,7 +30,7 @@ export function ListView({tasks,columns,selectedId,onSelect,onActual,patchTask}:
 
 export function TimelineView({tasks,onSelect}:{tasks:Task[];onSelect:(id:string)=>void}){
   const [zoom,setZoom]=useState<"week"|"month"|"fit">("fit");const {collapsed,toggle,collapseAll,expandAll}=useSharedWbsCollapse(tasks);const displayRows=filterCollapsedWbs(tasks,collapsed);
-  const actual=taskRange(tasks),pad=zoom==="week"?5:zoom==="month"?10:7,start=actual.start-pad*DAY,end=actual.end+2*DAY,days=Math.max(1,Math.ceil((end-start)/DAY)+1),range={start,end,days};
+  const actual=taskRange(tasks),pad=zoom==="week"?3:zoom==="month"?7:2,start=actual.start-pad*DAY,end=actual.end+pad*DAY,days=Math.max(1,Math.ceil((end-start)/DAY)+1),range={start,end,days};
   const pixelsPerDay=zoom==="week"?20:zoom==="month"?9:0,width=pixelsPerDay?Math.max(950,range.days*pixelsPerDay+250):950;
   const x=(time:number)=>Math.max(0,Math.min(100,(time-range.start)/DAY/range.days*100));
   const guides:Array<{time:number;major:boolean}>=[],labels:Array<{key:string;left:number;label:string}>=[];
