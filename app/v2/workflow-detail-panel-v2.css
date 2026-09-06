@@ -7,7 +7,7 @@
 .wv2-workflow-panel-content button{min-height:var(--v2-action-height);border:1px solid var(--line);border-radius:var(--v2-radius-sm);background:#fff;padding:0 11px;color:var(--ink);font-size:var(--v2-font-size-control);font-weight:700;display:inline-flex;align-items:center;justify-content:center;gap:6px}
 .wv2-workflow-panel-content button.primary{border-color:var(--teal);background:var(--teal);color:#fff}
 .wv2-workflow-panel-content button.danger{color:#b42318}
-.wv2-workflow-panel-content .action>div{display:flex;justify-content:flex-end;gap:6px;margin-top:8px;flex-wrap:wrap}
+.wv2-workflow-panel-content .action>div{display:flex;align-items:center;justify-content:flex-end;gap:8px;margin-top:10px;flex-wrap:wrap}
 .wv2-workflow-quick-status{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:10px 12px;border:1px solid var(--line);border-radius:var(--v2-radius-sm);background:#f8fafb}
 .wv2-workflow-quick-status>b{font-size:var(--v2-font-size-body);color:var(--text)}
 .wv2-workflow-quick-status>span:not(.status){color:var(--muted);font-size:var(--v2-font-size-caption);font-weight:700}
@@ -30,16 +30,6 @@
 .wv2-workflow-step-history .step-card>div>p em{display:block;margin-top:2px;color:#8a98a1;font-style:normal;font-size:10px}
 .wv2-current-step-action{border:1px solid #b8dbe6!important;background:#f9fcfd!important}
 .wv2-current-step-action h3{margin-top:0}
-.wv2-workflow-audit-history{border:1px solid var(--line);border-radius:var(--v2-radius-sm);background:#fff;overflow:hidden}
-.wv2-workflow-audit-history>summary{list-style:none;cursor:pointer;display:flex;align-items:center;justify-content:space-between;padding:10px 12px;color:#52636e;font-size:var(--v2-font-size-caption);font-weight:800}
-.wv2-workflow-audit-history>summary::-webkit-details-marker{display:none}
-.wv2-workflow-audit-history[open]>summary{border-bottom:1px solid var(--line);background:#f8fafb}
-.wv2-workflow-audit-history>div{padding:8px 12px}
-.wv2-workflow-audit-history article{display:grid;grid-template-columns:10px minmax(0,1fr);gap:8px;padding:7px 0}
-.wv2-workflow-audit-history article>span{width:7px;height:7px;margin-top:6px;border-radius:50%;background:var(--teal)}
-.wv2-workflow-audit-history article>div{display:grid;gap:1px}
-.wv2-workflow-audit-history article small{color:var(--muted);font-size:var(--v2-font-size-caption)}
-.wv2-workflow-audit-history article p{margin:3px 0 0;color:#566772;font-size:var(--v2-font-size-caption)}
 .wv2-request-info{display:grid;gap:10px}
 .wv2-request-info>header{padding-bottom:9px;border-bottom:1px solid var(--line)}
 .wv2-request-info>header small{color:var(--teal-dark);font-size:var(--v2-font-size-caption);font-weight:900;letter-spacing:.05em}
