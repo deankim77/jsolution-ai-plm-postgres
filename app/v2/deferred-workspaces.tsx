@@ -2,6 +2,7 @@
 
 import {Suspense,lazy,type ComponentType} from "react";
 import "./project-cost-font-standard.css";
+import "./schedule-header-unification.css";
 
 const lazyNamed=(loader:()=>Promise<{default:ComponentType<any>}>)=>{
   const Component=lazy(loader);
