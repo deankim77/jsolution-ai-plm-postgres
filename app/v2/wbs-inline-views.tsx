@@ -21,7 +21,7 @@ const taskRange=(tasks:Array<{plannedStart?:string;plannedEnd?:string}>)=>{const
 const issueCountFor=(task:Task,tasks:Task[])=>task.kind==="summary"?tasks.filter(candidate=>candidate.kind==="task"&&candidate.wbsCode.startsWith(`${task.wbsCode}.`)).reduce((sum,candidate)=>sum+Number(candidate.issueCount||0),0):Number(task.issueCount||0);
 const displayTaskName=(task:Pick<Task,"wbsCode"|"name">)=>{const code=task.wbsCode.trim(),name=task.name.trim();if(!code||!name)return name;if(!name.toLowerCase().startsWith(code.toLowerCase()))return name;const rest=name.slice(code.length);return /^[\s·.:-]+/.test(rest)?rest.replace(/^[\s·.:-]+/,"").trim()||name:name};
 const displayTaskTitle=(task:Pick<Task,"wbsCode"|"name">)=>`${task.wbsCode} ${displayTaskName(task)}`.trim();
-const weekLabel=(date:Date)=>`${String(date.getUTCMonth()+1).padStart(2,"0")}.${String(date.getUTCDate()).padStart(2,"0")}`;
+const weekLabel=(date:Date)=>`${date.getUTCMonth()+1}.${String(date.getUTCDate()).padStart(2,"0")}`;
 
 type ListProps={tasks:Task[];columns:Set<ColumnKey>;selectedId:string;collapsed:Set<string>;onCollapse:(id:string)=>void;onSelect:(id:string)=>void;onActual:(id:string)=>void;patchTask:(id:string,patch:Partial<Task>)=>void};
 export function ListView({tasks,columns,selectedId,onSelect,onActual,patchTask}:ListProps){
