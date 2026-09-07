@@ -5,6 +5,7 @@ import {canManageProject,contextErrorResponse,requireProjectAccess,resolveReques
 type D1={prepare:(sql:string)=>any;batch:(statements:any[])=>Promise<unknown>};
 const DECISIONS=new Set(["PASS","CONDITIONAL_PASS","REJECT","DEFER"]);
 const normalizeGateCode=(value:string)=>String(value||"").replace(/-(?:REVIEW|R)$/i,"");
+const gateCompleted=(decision?:string)=>decision==="PASS"||decision==="CONDITIONAL_PASS";
 async function runtimeDb():Promise<D1>{return getLegacyDbCompat() as D1;}
 async function ensureTables(db:D1){
   await db.prepare(`CREATE TABLE IF NOT EXISTS project_gate_decisions (
@@ -29,7 +30,14 @@ export async function GET(request:Request,{params}:{params:Promise<{projectId:st
     LEFT JOIN project_gate_decisions d ON d.id=(SELECT d2.id FROM project_gate_decisions d2 WHERE d2.project_id=w.project_id AND d2.gate_task_id=w.id ORDER BY d2.decided_at DESC,d2.id DESC LIMIT 1)
     LEFT JOIN users u ON u.id=d.decided_by
     WHERE w.project_id=? AND w.task_type='gate' ORDER BY w.sort_order`).bind(projectId).all();
-  return Response.json({gates:(rows.results??[]).map((row:any)=>({...row,gateCode:normalizeGateCode(row.gateCode)}))});
+  const gates=(rows.results??[]).map((row:any)=>({...row,gateCode:normalizeGateCode(row.gateCode)}));
+  const stale=gates.filter((gate:any)=>gateCompleted(gate.decision)&&(gate.status!=="completed"||Number(gate.progress)!==100));
+  if(stale.length){
+    const now=Math.floor(Date.now()/1000);
+    await db.batch(stale.map((gate:any)=>db.prepare("UPDATE wbs_tasks SET status='completed',progress=100,updated_at=? WHERE id=? AND project_id=?").bind(now,gate.taskId,projectId)));
+    stale.forEach((gate:any)=>{gate.status="completed";gate.progress=100});
+  }
+  return Response.json({gates});
 }
 
 export async function POST(request:Request,{params}:{params:Promise<{projectId:string}>}){
@@ -46,7 +54,7 @@ export async function POST(request:Request,{params}:{params:Promise<{projectId:s
   const warnings=decision==="PASS"&& (incompleteTasks.length||missingDeliverables.length)
     ? {incompleteTasks,missingDeliverables,message:`미완료 활동 ${incompleteTasks.length}건 · 필수 산출물 미충족 ${missingDeliverables.length}건을 확인하고 승인했습니다.`}
     : null;
-  const now=Math.floor(Date.now()/1000),gateCode=normalizeGateCode(gate.wbsCode),completed=decision==="PASS"||decision==="CONDITIONAL_PASS";
+  const now=Math.floor(Date.now()/1000),gateCode=normalizeGateCode(gate.wbsCode),completed=gateCompleted(decision);
   await db.batch([
     db.prepare("INSERT INTO project_gate_decisions (id,project_id,gate_task_id,gate_code,decision,note,decided_by,decided_at) VALUES (?,?,?,?,?,?,?,?)").bind(crypto.randomUUID(),projectId,gate.id,gateCode,decision,input.note?.trim()||null,context.userId,now),
     db.prepare("UPDATE wbs_tasks SET status=?,progress=?,updated_at=? WHERE id=? AND project_id=?").bind(completed?"completed":"review",completed?100:95,now,gate.id,projectId),
