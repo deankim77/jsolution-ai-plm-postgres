@@ -2,6 +2,8 @@
 import {contextErrorResponse,requireProjectAccess,resolveRequestContext} from "../../../../db/request-context";
 import {parseJson,workflowDb} from "../shared";
 
+const applicationTypeForCode=(code:string)=>code==="EC_ACTION"?"ECR":code==="QUALITY_ACTION"?"QUALITY":"";
+
 export async function GET(request:Request){
   const db=await workflowDb();
   let context;
@@ -17,18 +19,22 @@ export async function GET(request:Request){
   try{await requireProjectAccess(db,context,projectId)}
   catch(reason){return contextErrorResponse(reason)??Response.json({error:"프로젝트 접근 권한이 없습니다."},{status:403})}
 
-  const versionQuery=templateId
-    ? db.prepare("SELECT definition FROM workflow_template_versions WHERE template_id=? ORDER BY version DESC LIMIT 1").bind(templateId).first<any>()
-    : templateCode
-      ? db.prepare("SELECT v.definition FROM workflow_template_versions v JOIN workflow_templates t ON t.id=v.template_id WHERE t.company_id=? AND t.code=? AND t.status='active' ORDER BY v.version DESC LIMIT 1").bind(context.companyId,templateCode).first<any>()
-      : Promise.resolve(null);
+  let version:any=null;
+  if(templateId){
+    version=await db.prepare("SELECT definition FROM workflow_template_versions WHERE template_id=? AND status='published' ORDER BY version DESC LIMIT 1").bind(templateId).first<any>();
+  }else if(templateCode){
+    version=await db.prepare("SELECT v.definition FROM workflow_template_versions v JOIN workflow_templates t ON t.id=v.template_id WHERE t.company_id=? AND t.code=? AND t.status='active' AND v.status='published' ORDER BY v.version DESC LIMIT 1").bind(context.companyId,templateCode).first<any>();
+    if(!version){
+      const applicationType=applicationTypeForCode(templateCode);
+      if(applicationType)version=await db.prepare("SELECT v.definition FROM workflow_template_versions v JOIN workflow_templates t ON t.id=v.template_id WHERE t.company_id=? AND t.application_type=? AND t.status='active' AND v.status='published' ORDER BY t.updated_at DESC,v.version DESC LIMIT 1").bind(context.companyId,applicationType).first<any>();
+    }
+  }
 
-  const [tasks,members,users,deliverables,version]=await Promise.all([
+  const [tasks,members,users,deliverables]=await Promise.all([
     db.prepare("SELECT id,wbs_code AS wbsCode,name,role_code AS roleCode,assignee_user_id AS assigneeUserId FROM wbs_tasks WHERE project_id=? AND kind<>'summary' ORDER BY sort_order").bind(projectId).all(),
     db.prepare("SELECT m.user_id AS userId,u.name,u.email,m.project_role AS projectRole FROM project_members m JOIN users u ON u.id=m.user_id WHERE m.project_id=? AND u.status='active' ORDER BY CASE upper(m.project_role) WHEN 'PM' THEN 0 WHEN 'PL' THEN 1 ELSE 2 END,u.name").bind(projectId).all(),
     db.prepare(`SELECT u.id AS userId,u.name,u.email,COALESCE(parent.name || ' / ','') || COALESCE(org.name,'소속 미지정') AS organizationPath,COALESCE(GROUP_CONCAT(DISTINCT r.name),'') AS roleNames FROM users u LEFT JOIN organizations org ON org.id=u.organization_id AND org.company_id=u.company_id LEFT JOIN organizations parent ON parent.id=org.parent_id AND parent.company_id=u.company_id LEFT JOIN user_roles ur ON ur.user_id=u.id LEFT JOIN roles r ON r.id=ur.role_id AND r.company_id=u.company_id WHERE u.company_id=? AND u.status='active' GROUP BY u.id,u.name,u.email,parent.name,org.name ORDER BY COALESCE(parent.sort_order,0),COALESCE(org.sort_order,0),u.name`).bind(context.companyId).all(),
     db.prepare("SELECT id,name,category AS type,task_id AS taskId,status,version,COALESCE(document_kind,'document') AS documentKind,drawing_code AS drawingCode,(SELECT COUNT(*) FROM deliverable_versions v WHERE v.deliverable_id=deliverables.id AND v.deleted_at IS NULL) AS revisionCount FROM deliverables WHERE project_id=? ORDER BY updated_at DESC").bind(projectId).all(),
-    versionQuery,
   ]);
 
   return Response.json({
