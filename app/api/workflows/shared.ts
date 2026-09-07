@@ -12,10 +12,16 @@ export const nowSeconds=()=>Math.floor(Date.now()/1000);
 export const isWorkflowManager=(context:RequestContext)=>context.systemRoles.some(role=>["SUPER_ADMIN","ADMIN","SYSTEM_ADMIN","PM"].includes(role));
 
 export async function seedDefaultWorkflowTemplates(db:D1,context:RequestContext){
-  const existing=await db.prepare("SELECT COUNT(*) AS count FROM workflow_templates WHERE company_id=?").bind(context.companyId).first<{count:number}>();
-  if(Number(existing?.count||0)>0)return;
+  const existing=await db.prepare("SELECT code FROM workflow_templates WHERE company_id=?").bind(context.companyId).all<{code:string}>();
+  const existingCodes=new Set((existing.results??[]).map(row=>String(row.code||"").trim()).filter(Boolean));
   const now=nowSeconds(),statements:any[]=[];
-  for(const item of defaultWorkflowTemplates){const templateId=crypto.randomUUID(),versionId=crypto.randomUUID();const definition={description:`${item.name} 기본 템플릿`,applicationType:item.type,projectRequired:true,taskLinkMode:"optional",registerCommonDocument:Boolean(item.registerDocument),documentCategory:item.category||null,steps:item.steps};statements.push(db.prepare("INSERT INTO workflow_templates (id,company_id,code,name,application_type,description,project_required,task_link_mode,register_common_document,document_category,status,current_version,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?, 'active',1,?,?)").bind(templateId,context.companyId,item.code,item.name,item.type,definition.description,1,"optional",item.registerDocument?1:0,item.category||null,now,now));statements.push(db.prepare("INSERT INTO workflow_template_versions (id,template_id,version,definition,status,published_at,created_by,created_at,updated_at) VALUES (?,?,1,?,'published',?,?,?,?)").bind(versionId,templateId,JSON.stringify(definition),now,context.userId,now,now))}
+  for(const item of defaultWorkflowTemplates){
+    if(existingCodes.has(item.code))continue;
+    const templateId=crypto.randomUUID(),versionId=crypto.randomUUID();
+    const definition={description:`${item.name} 기본 템플릿`,applicationType:item.type,projectRequired:true,taskLinkMode:"optional",registerCommonDocument:Boolean(item.registerDocument),documentCategory:item.category||null,steps:item.steps};
+    statements.push(db.prepare("INSERT INTO workflow_templates (id,company_id,code,name,application_type,description,project_required,task_link_mode,register_common_document,document_category,status,current_version,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?, 'active',1,?,?)").bind(templateId,context.companyId,item.code,item.name,item.type,definition.description,1,"optional",item.registerDocument?1:0,item.category||null,now,now));
+    statements.push(db.prepare("INSERT INTO workflow_template_versions (id,template_id,version,definition,status,published_at,created_by,created_at,updated_at) VALUES (?,?,1,?,'published',?,?,?,?)").bind(versionId,templateId,JSON.stringify(definition),now,context.userId,now,now));
+  }
   if(statements.length)await db.batch(statements);
 }
 
