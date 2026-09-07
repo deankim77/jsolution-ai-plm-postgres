@@ -23,7 +23,7 @@ const daysBetween=(from:string,to:string)=>Math.round((parse(to)-parse(from))/DA
 const clamp=(value:number,min:number,max:number)=>Math.max(min,Math.min(max,value));
 const displayTaskName=(task:Pick<ScheduleTask,"wbsCode"|"name">)=>{const code=task.wbsCode.trim(),name=task.name.trim();if(!code||!name)return name;if(!name.toLowerCase().startsWith(code.toLowerCase()))return name;const rest=name.slice(code.length);return /^[\s·.:-]+/.test(rest)?rest.replace(/^[\s·.:-]+/,"").trim()||name:name};
 const displayTaskTitle=(task:Pick<ScheduleTask,"wbsCode"|"name">)=>`${task.wbsCode} ${displayTaskName(task)}`.trim();
-const weekLabel=(date:Date)=>`${String(date.getUTCMonth()+1).padStart(2,"0")}.${String(date.getUTCDate()).padStart(2,"0")}`;
+const weekLabel=(date:Date)=>`${date.getUTCMonth()+1}.${String(date.getUTCDate()).padStart(2,"0")}`;
 const businessDistance=(from?:string,to?:string)=>{
   if(!from||!to||!Number.isFinite(parse(from))||!Number.isFinite(parse(to)))return 0;
   if(from===to)return 0;
