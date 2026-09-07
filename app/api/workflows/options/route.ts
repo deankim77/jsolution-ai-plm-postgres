@@ -2,8 +2,6 @@
 import {contextErrorResponse,requireProjectAccess,resolveRequestContext} from "../../../../db/request-context";
 import {parseJson,workflowDb} from "../shared";
 
-const applicationTypeForCode=(code:string)=>code==="EC_ACTION"?"ECR":code==="QUALITY_ACTION"?"QUALITY":"";
-
 export async function GET(request:Request){
   const db=await workflowDb();
   let context;
@@ -24,10 +22,6 @@ export async function GET(request:Request){
     version=await db.prepare("SELECT definition FROM workflow_template_versions WHERE template_id=? AND status='published' ORDER BY version DESC LIMIT 1").bind(templateId).first<any>();
   }else if(templateCode){
     version=await db.prepare("SELECT v.definition FROM workflow_template_versions v JOIN workflow_templates t ON t.id=v.template_id WHERE t.company_id=? AND t.code=? AND t.status='active' AND v.status='published' ORDER BY v.version DESC LIMIT 1").bind(context.companyId,templateCode).first<any>();
-    if(!version){
-      const applicationType=applicationTypeForCode(templateCode);
-      if(applicationType)version=await db.prepare("SELECT v.definition FROM workflow_template_versions v JOIN workflow_templates t ON t.id=v.template_id WHERE t.company_id=? AND t.application_type=? AND t.status='active' AND v.status='published' ORDER BY t.updated_at DESC,v.version DESC LIMIT 1").bind(context.companyId,applicationType).first<any>();
-    }
   }
 
   const [tasks,members,users,deliverables]=await Promise.all([
