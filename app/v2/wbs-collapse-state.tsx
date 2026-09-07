@@ -74,6 +74,8 @@ export function WbsScheduleToolbarControls({zoom,onZoom,showPeriod=true}:{zoom?:
       mount.style.alignItems="center";
       mount.style.gap="8px";
       mount.style.whiteSpace="nowrap";
+      mount.style.flex="1 1 auto";
+      mount.style.minWidth="0";
       const hierarchy=document.getElementById(TOOLBAR_SLOT_ID);
       if(hierarchy?.nextSibling)toolbar.insertBefore(mount,hierarchy.nextSibling);else if(hierarchy)toolbar.appendChild(mount);else{
         const menus=toolbar.querySelectorAll(":scope > .wv2-toolbar-menu");
@@ -85,9 +87,9 @@ export function WbsScheduleToolbarControls({zoom,onZoom,showPeriod=true}:{zoom?:
     return()=>{if(mount?.isConnected&&mount.childElementCount===0)mount.remove()};
   },[]);
   if(!slot)return null;
-  const legend=<span aria-label="진척률 범례" style={{display:"inline-flex",alignItems:"center",gap:10,color:"#61717d",fontSize:11,fontWeight:700}}><span style={{display:"inline-flex",alignItems:"center",gap:4}}><i style={{width:16,height:4,borderRadius:3,background:"#cbe9e6"}}/>계획</span><span style={{display:"inline-flex",alignItems:"center",gap:4}}><i style={{width:16,height:4,borderRadius:3,background:"#0b8f89"}}/>정상 실적</span><span style={{display:"inline-flex",alignItems:"center",gap:4}}><i style={{width:16,height:4,borderRadius:3,background:"#f59e0b"}}/>지연 실적</span></span>;
-  const period=showPeriod&&zoom&&onZoom?<span aria-label="기간 배율" style={{display:"inline-flex",alignItems:"center",gap:4}}><span style={{color:"#61717d",fontSize:11,fontWeight:800,marginLeft:2}}>기간</span>{([["week","주"],["month","월"],["fit","전체"]] as const).map(([key,label])=><button key={key} type="button" style={zoomStyle(zoom===key)} onClick={event=>{event.stopPropagation();onZoom(key)}}>{label}</button>)}</span>:null;
-  return createPortal(<>{legend}{period}</>,slot);
+  const legend=<span aria-label="진척률 범례" style={{display:"inline-flex",alignItems:"center",gap:10,marginLeft:"auto",color:"#61717d",fontSize:11,fontWeight:700}}><span style={{display:"inline-flex",alignItems:"center",gap:4}}><i style={{width:16,height:4,borderRadius:3,background:"#cbe9e6"}}/>계획</span><span style={{display:"inline-flex",alignItems:"center",gap:4}}><i style={{width:16,height:4,borderRadius:3,background:"#0b8f89"}}/>정상 실적</span><span style={{display:"inline-flex",alignItems:"center",gap:4}}><i style={{width:16,height:4,borderRadius:3,background:"#f59e0b"}}/>지연 실적</span></span>;
+  const period=showPeriod&&zoom&&onZoom?<span aria-label="기간 배율" style={{display:"inline-flex",alignItems:"center",gap:4}}><span style={{color:"#50616a",fontSize:"var(--v2-font-size-control)",fontWeight:700,marginLeft:2}}>기간</span>{([["week","주"],["month","월"],["fit","전체"]] as const).map(([key,label])=><button key={key} type="button" style={zoomStyle(zoom===key)} onClick={event=>{event.stopPropagation();onZoom(key)}}>{label}</button>)}</span>:null;
+  return createPortal(<>{period}{legend}</>,slot);
 }
 
 export function WbsCollapseChevron({collapsed,size=16}:{collapsed:boolean;size?:number}){return collapsed?<ChevronRight size={size}/>:<ChevronDown size={size}/>}
