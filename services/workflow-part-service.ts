@@ -13,6 +13,14 @@ function normalizeSourceType(value: string): WorkflowSourceType {
   throw new Error("지원하지 않는 PART 연결 업무 유형입니다.");
 }
 
+function isMissingPartLinkTable(reason: unknown) {
+  const code = typeof reason === "object" && reason !== null && "code" in reason
+    ? String((reason as { code?: unknown }).code ?? "")
+    : "";
+  const message = reason instanceof Error ? reason.message : String(reason ?? "");
+  return code === "42P01" || /relation ["']workflow_source_part_links["'] does not exist/i.test(message);
+}
+
 export async function listWorkflowPartOptions(companyId: string, query = "") {
   return searchActiveWorkflowParts(companyId, query, 80);
 }
@@ -34,18 +42,33 @@ export async function setSourcePrimaryPart(companyId: string, sourceType: string
 
 export async function getSourcePrimaryPart(companyId: string, sourceType: string, sourceId: string) {
   const type = normalizeSourceType(sourceType);
-  const rows = await listWorkflowSourceParts(companyId, type, [sourceId]);
-  return rows.sort((a, b) => a.sortOrder - b.sortOrder)[0] ?? null;
+  try {
+    const rows = await listWorkflowSourceParts(companyId, type, [sourceId]);
+    return rows.sort((a, b) => a.sortOrder - b.sortOrder)[0] ?? null;
+  } catch (reason) {
+    if (isMissingPartLinkTable(reason)) return null;
+    throw reason;
+  }
 }
 
 export async function getSourcePartsMap(companyId: string, sourceType: string, sourceIds: string[]) {
   const type = normalizeSourceType(sourceType);
-  const rows = await listWorkflowSourceParts(companyId, type, sourceIds);
-  const map = new Map<string, typeof rows>();
-  rows.forEach(row => map.set(row.sourceId, [...(map.get(row.sourceId) ?? []), row]));
-  return map;
+  try {
+    const rows = await listWorkflowSourceParts(companyId, type, sourceIds);
+    const map = new Map<string, typeof rows>();
+    rows.forEach(row => map.set(row.sourceId, [...(map.get(row.sourceId) ?? []), row]));
+    return map;
+  } catch (reason) {
+    if (isMissingPartLinkTable(reason)) return new Map();
+    throw reason;
+  }
 }
 
 export async function clearSourceParts(companyId: string, sourceType: string, sourceId: string) {
-  await deleteWorkflowSourcePartLinks(companyId, normalizeSourceType(sourceType), sourceId);
+  try {
+    await deleteWorkflowSourcePartLinks(companyId, normalizeSourceType(sourceType), sourceId);
+  } catch (reason) {
+    if (isMissingPartLinkTable(reason)) return;
+    throw reason;
+  }
 }
