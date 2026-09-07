@@ -86,9 +86,9 @@ export async function POST(request:Request,{params}:{params:Promise<{projectId:s
   if(task.kind==="summary")return Response.json({error:"그룹 WBS에는 실적을 입력할 수 없습니다."},{status:400});
   if(task.status==="planned"){
     const predecessor=await db.prepare(`SELECT p.id,p.name,p.task_type AS taskType,p.status,
-      (SELECT decision FROM project_gate_decisions g WHERE g.project_id=p.project_id AND g.gate_task_id=p.id ORDER BY g.decided_at DESC,g.rowid DESC LIMIT 1) AS gateDecision
+      (SELECT decision FROM project_gate_decisions g WHERE g.project_id=p.project_id AND g.gate_task_id=p.id ORDER BY g.decided_at DESC,g.id DESC LIMIT 1) AS gateDecision
       FROM wbs_tasks current JOIN wbs_tasks p ON p.id=current.predecessor_id WHERE current.id=? AND current.project_id=?`).bind(task.id,projectId).first() as {id:string;name:string;taskType:string;status:string;gateDecision?:string}|null;
-    if(predecessor?.taskType==="gate"&&predecessor.gateDecision!=="PASS")warnings.push(`선행 Gate '${predecessor.name}'가 아직 PASS 승인되지 않았습니다.`);
+    if(predecessor?.taskType==="gate"&&!['PASS','CONDITIONAL_PASS'].includes(predecessor.gateDecision||""))warnings.push(`선행 Gate '${predecessor.name}'가 아직 승인 완료되지 않았습니다.`);
     if(predecessor&&predecessor.taskType!=="gate"&&predecessor.status!=="completed")warnings.push(`선행 Task '${predecessor.name}'가 아직 완료되지 않았습니다.`);
   }
   const now=Math.floor(Date.now()/1000);const actualDate=input.actualDate||new Date().toISOString().slice(0,10);
@@ -103,7 +103,7 @@ export async function POST(request:Request,{params}:{params:Promise<{projectId:s
     return Response.json({ok:true,status:"active",progress:task.progress,warnings,message:warnings.length?`Task를 시작했습니다. 확인: ${warnings.join(" / ")}`:"Task를 시작했습니다."});
   }
   if(input.action==="approve"||input.action==="reject"){
-    if(task.taskType==="gate")return Response.json({error:"Gate 완료는 Gate Review에서 PASS·조건부 승인·반려·보류 중 하나로 결정해 주세요.",code:"GATE_DECISION_REQUIRED"},{status:409});
+    if(task.taskType==="gate")return Response.json({error:"Gate 완료는 Gate Review에서 PASS 또는 조건부 승인을 등록해 주세요.",code:"GATE_DECISION_REQUIRED"},{status:409});
     if(task.status!=="review")return Response.json({error:"완료 검토 대기 중인 Task가 아닙니다."},{status:409});
     if(!canManageProject(context,access.projectRole))return Response.json({error:"PM 또는 PL만 완료를 승인하거나 보완 요청할 수 있습니다."},{status:403});
     const actor=task.taskType==="gate"&&!["PM","PL"].includes(task.completionActor||"")?"PL":task.completionActor||"assignee";const allowed=actor==="PM"?access.projectRole==="PM"||access.isAdmin:actor==="PL"?["PM","PL"].includes(access.projectRole||"")||access.isAdmin:true;
