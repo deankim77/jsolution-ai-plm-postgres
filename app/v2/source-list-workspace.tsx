@@ -1,5 +1,5 @@
 "use client";
-/* eslint-disable @typescript-eslint/no-explicit-any */
+/* eslint-disable @typescript-eslint/no-explicit-any,react-hooks/exhaustive-deps */
 import {useEffect,useMemo,useState} from "react";
 import {Filter,GitPullRequestArrow,Plus,RefreshCw,Search,ShieldCheck} from "lucide-react";
 import {CommonProjectSelector} from "./common-project-selector";
