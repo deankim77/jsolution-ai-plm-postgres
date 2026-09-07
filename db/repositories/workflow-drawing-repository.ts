@@ -33,7 +33,7 @@ const drawingSelect = {
 
 export async function searchWorkflowDrawings(companyId: string, query = "", limit = 80): Promise<WorkflowDrawing[]> {
   const db = getDb();
-  const normalized = query.trim();
+  const normalized = (query.trim().split(/\s+·\s+/)[0] ?? "").trim();
   const conditions = [
     eq(projectsDb.companyId, companyId),
     sql`COALESCE(deliverables.document_kind, 'document') = 'drawing'`,
