@@ -16,6 +16,62 @@ async function ensureBaselineTables(db:D1){await db.batch([
   db.prepare("CREATE TABLE IF NOT EXISTS project_baseline_tasks (baseline_id text NOT NULL,task_id text NOT NULL,wbs_code text NOT NULL,name text NOT NULL,planned_start text,planned_end text,duration_days integer NOT NULL,sort_order integer NOT NULL,PRIMARY KEY(baseline_id,task_id),FOREIGN KEY(baseline_id) REFERENCES project_baselines(id) ON DELETE CASCADE)"),
 ])}
 
+async function ensureWbsChangeTables(db:D1){await db.batch([
+  db.prepare("CREATE TABLE IF NOT EXISTS project_wbs_edit_snapshots (project_id text PRIMARY KEY NOT NULL,captured_at integer NOT NULL,captured_by text,FOREIGN KEY(project_id) REFERENCES projects(id) ON DELETE CASCADE)"),
+  db.prepare("CREATE TABLE IF NOT EXISTS project_wbs_edit_snapshot_tasks (project_id text NOT NULL,task_id text NOT NULL,wbs_code text NOT NULL,name text NOT NULL,planned_start text,planned_end text,duration_days integer NOT NULL,assignee_user_id text,assignee_name text,predecessor_code text,sort_order integer NOT NULL,PRIMARY KEY(project_id,task_id),FOREIGN KEY(project_id) REFERENCES projects(id) ON DELETE CASCADE)"),
+  db.prepare("CREATE TABLE IF NOT EXISTS project_wbs_change_sets (id text PRIMARY KEY NOT NULL,project_id text NOT NULL,checked_in_at integer NOT NULL,checked_in_by text,FOREIGN KEY(project_id) REFERENCES projects(id) ON DELETE CASCADE)"),
+  db.prepare("CREATE INDEX IF NOT EXISTS project_wbs_change_sets_project_time_idx ON project_wbs_change_sets(project_id,checked_in_at DESC)"),
+  db.prepare("CREATE TABLE IF NOT EXISTS project_wbs_change_items (id text PRIMARY KEY NOT NULL,change_set_id text NOT NULL,project_id text NOT NULL,task_id text,wbs_code text,task_name text,change_type text NOT NULL,before_value text,after_value text,sort_order integer NOT NULL DEFAULT 0,FOREIGN KEY(change_set_id) REFERENCES project_wbs_change_sets(id) ON DELETE CASCADE,FOREIGN KEY(project_id) REFERENCES projects(id) ON DELETE CASCADE)"),
+  db.prepare("CREATE INDEX IF NOT EXISTS project_wbs_change_items_task_idx ON project_wbs_change_items(project_id,task_id)"),
+])}
+
+async function captureEditSnapshot(db:D1,projectId:string,now:number,actorUserId:string){
+  await ensureWbsChangeTables(db);
+  const tasks=await db.prepare("SELECT w.id,w.wbs_code AS wbsCode,w.name,w.planned_start AS plannedStart,w.planned_end AS plannedEnd,w.duration_days AS durationDays,w.assignee_user_id AS assigneeUserId,u.name AS assigneeName,w.predecessor_code AS predecessorCode,w.sort_order AS sortOrder FROM wbs_tasks w LEFT JOIN users u ON u.id=w.assignee_user_id WHERE w.project_id=? ORDER BY w.sort_order").bind(projectId).all();
+  await db.batch([
+    db.prepare("DELETE FROM project_wbs_edit_snapshot_tasks WHERE project_id=?").bind(projectId),
+    db.prepare("DELETE FROM project_wbs_edit_snapshots WHERE project_id=?").bind(projectId),
+    db.prepare("INSERT INTO project_wbs_edit_snapshots (project_id,captured_at,captured_by) VALUES (?,?,?)").bind(projectId,now,actorUserId),
+    ...(tasks.results??[]).map((task:any)=>db.prepare("INSERT INTO project_wbs_edit_snapshot_tasks (project_id,task_id,wbs_code,name,planned_start,planned_end,duration_days,assignee_user_id,assignee_name,predecessor_code,sort_order) VALUES (?,?,?,?,?,?,?,?,?,?,?)").bind(projectId,task.id,task.wbsCode,task.name,task.plannedStart||null,task.plannedEnd||null,Number(task.durationDays)||1,task.assigneeUserId||null,task.assigneeName||null,task.predecessorCode||null,Number(task.sortOrder)||0)),
+  ]);
+}
+
+function scheduleValue(task:any){return JSON.stringify({plannedStart:task.plannedStart||null,plannedEnd:task.plannedEnd||null,durationDays:Number(task.durationDays)||1})}
+function assigneeValue(task:any){return JSON.stringify({userId:task.assigneeUserId||null,name:task.assigneeName||null})}
+function taskValue(task:any){return JSON.stringify({wbsCode:task.wbsCode||"",name:task.name||"",plannedStart:task.plannedStart||null,plannedEnd:task.plannedEnd||null,durationDays:Number(task.durationDays)||1,assigneeUserId:task.assigneeUserId||null,assigneeName:task.assigneeName||null})}
+
+async function recordWbsChangeSet(db:D1,projectId:string,now:number,actorUserId:string){
+  await ensureWbsChangeTables(db);
+  const snapshot=await db.prepare("SELECT project_id AS projectId FROM project_wbs_edit_snapshots WHERE project_id=?").bind(projectId).first();
+  if(!snapshot)return {changeSetId:null,changeCount:0};
+  const [beforeRows,currentRows]=await Promise.all([
+    db.prepare("SELECT task_id AS id,wbs_code AS wbsCode,name,planned_start AS plannedStart,planned_end AS plannedEnd,duration_days AS durationDays,assignee_user_id AS assigneeUserId,assignee_name AS assigneeName,predecessor_code AS predecessorCode,sort_order AS sortOrder FROM project_wbs_edit_snapshot_tasks WHERE project_id=? ORDER BY sort_order").bind(projectId).all(),
+    db.prepare("SELECT w.id,w.wbs_code AS wbsCode,w.name,w.planned_start AS plannedStart,w.planned_end AS plannedEnd,w.duration_days AS durationDays,w.assignee_user_id AS assigneeUserId,u.name AS assigneeName,w.predecessor_code AS predecessorCode,w.sort_order AS sortOrder FROM wbs_tasks w LEFT JOIN users u ON u.id=w.assignee_user_id WHERE w.project_id=? ORDER BY w.sort_order").bind(projectId).all(),
+  ]);
+  const before=(beforeRows.results??[]) as any[],current=(currentRows.results??[]) as any[];
+  const beforeMap=new Map(before.map(task=>[String(task.id),task])),currentMap=new Map(current.map(task=>[String(task.id),task]));
+  const changes:Array<{taskId:string|null;wbsCode:string;taskName:string;changeType:string;beforeValue:string|null;afterValue:string|null;sortOrder:number}>=[];
+  for(const oldTask of before){
+    const next=currentMap.get(String(oldTask.id));
+    if(!next){changes.push({taskId:String(oldTask.id),wbsCode:oldTask.wbsCode||"",taskName:oldTask.name||"",changeType:"TASK_DELETED",beforeValue:taskValue(oldTask),afterValue:null,sortOrder:Number(oldTask.sortOrder)||0});continue}
+    if((oldTask.plannedStart||null)!==(next.plannedStart||null)||(oldTask.plannedEnd||null)!==(next.plannedEnd||null)||Number(oldTask.durationDays||1)!==Number(next.durationDays||1))changes.push({taskId:String(next.id),wbsCode:next.wbsCode||oldTask.wbsCode||"",taskName:next.name||oldTask.name||"",changeType:"SCHEDULE_CHANGE",beforeValue:scheduleValue(oldTask),afterValue:scheduleValue(next),sortOrder:Number(next.sortOrder)||0});
+    if((oldTask.assigneeUserId||null)!==(next.assigneeUserId||null))changes.push({taskId:String(next.id),wbsCode:next.wbsCode||oldTask.wbsCode||"",taskName:next.name||oldTask.name||"",changeType:"ASSIGNEE_CHANGE",beforeValue:assigneeValue(oldTask),afterValue:assigneeValue(next),sortOrder:Number(next.sortOrder)||0});
+    if((oldTask.predecessorCode||null)!==(next.predecessorCode||null))changes.push({taskId:String(next.id),wbsCode:next.wbsCode||oldTask.wbsCode||"",taskName:next.name||oldTask.name||"",changeType:"PREDECESSOR_CHANGE",beforeValue:oldTask.predecessorCode||null,afterValue:next.predecessorCode||null,sortOrder:Number(next.sortOrder)||0});
+  }
+  for(const next of current){if(!beforeMap.has(String(next.id)))changes.push({taskId:String(next.id),wbsCode:next.wbsCode||"",taskName:next.name||"",changeType:"TASK_ADDED",beforeValue:null,afterValue:taskValue(next),sortOrder:Number(next.sortOrder)||0})}
+  if(changes.length){
+    const changeSetId=crypto.randomUUID();
+    await db.batch([
+      db.prepare("INSERT INTO project_wbs_change_sets (id,project_id,checked_in_at,checked_in_by) VALUES (?,?,?,?)").bind(changeSetId,projectId,now,actorUserId),
+      ...changes.map(change=>db.prepare("INSERT INTO project_wbs_change_items (id,change_set_id,project_id,task_id,wbs_code,task_name,change_type,before_value,after_value,sort_order) VALUES (?,?,?,?,?,?,?,?,?,?)").bind(crypto.randomUUID(),changeSetId,projectId,change.taskId,change.wbsCode||null,change.taskName||null,change.changeType,change.beforeValue,change.afterValue,change.sortOrder)),
+    ]);
+    await db.batch([db.prepare("DELETE FROM project_wbs_edit_snapshot_tasks WHERE project_id=?").bind(projectId),db.prepare("DELETE FROM project_wbs_edit_snapshots WHERE project_id=?").bind(projectId)]);
+    return {changeSetId,changeCount:changes.length};
+  }
+  await db.batch([db.prepare("DELETE FROM project_wbs_edit_snapshot_tasks WHERE project_id=?").bind(projectId),db.prepare("DELETE FROM project_wbs_edit_snapshots WHERE project_id=?").bind(projectId)]);
+  return {changeSetId:null,changeCount:0};
+}
+
 async function captureStartBaseline(db:D1,projectId:string,now:number,actorUserId:string){
   await ensureBaselineTables(db);
   const existing=await db.prepare("SELECT id,version FROM project_baselines WHERE project_id=? AND is_active=1 ORDER BY version DESC LIMIT 1").bind(projectId).first() as {id:string;version:number}|null;
@@ -71,10 +127,13 @@ export async function POST(request:Request,{params}:{params:Promise<{projectId:s
   if(action==="stop"&&!input.reason?.trim())return Response.json({error:"프로젝트 중단 사유를 입력해 주세요."},{status:400});
   if(action==="start"){const validation=await startValidation(db,projectId,project);if(validation.errors.length)return Response.json({error:"프로젝트 시작 조건을 충족하지 못했습니다.",...validation},{status:422});if(validation.warnings.length&&!input.force)return Response.json({requiresConfirmation:true,...validation})}
   if(action==="complete"){const warnings=await completionValidation(db,projectId);if(warnings.length&&!input.force)return Response.json({requiresConfirmation:true,warnings})}
-  const now=Math.floor(Date.now()/1000),toStatus=nextStatus[action],baseline=action==="start"?await captureStartBaseline(db,projectId,now,context.userId):null;
+  const now=Math.floor(Date.now()/1000),toStatus=nextStatus[action];
+  if(action==="prepare")await captureEditSnapshot(db,projectId,now,context.userId);
+  const wbsChanges=action==="start"?await recordWbsChangeSet(db,projectId,now,context.userId):{changeSetId:null,changeCount:0};
+  const baseline=action==="start"?await captureStartBaseline(db,projectId,now,context.userId):null;
   await db.batch([
     db.prepare("UPDATE projects SET status=?,updated_at=? WHERE id=? AND company_id=?").bind(toStatus,now,projectId,context.companyId),
-    db.prepare("INSERT INTO audit_logs (id,company_id,actor_user_id,action,entity_type,entity_id,detail,created_at) VALUES (?,?,?,?,?,?,?,?)").bind(crypto.randomUUID(),context.companyId,context.userId,`PROJECT_${action.toUpperCase()}`,"PROJECT",projectId,JSON.stringify({fromStatus:project.status,toStatus,reason:input.reason?.trim()||null,baselineId:baseline?.id||null}),now),
+    db.prepare("INSERT INTO audit_logs (id,company_id,actor_user_id,action,entity_type,entity_id,detail,created_at) VALUES (?,?,?,?,?,?,?,?)").bind(crypto.randomUUID(),context.companyId,context.userId,`PROJECT_${action.toUpperCase()}`,"PROJECT",projectId,JSON.stringify({fromStatus:project.status,toStatus,reason:input.reason?.trim()||null,baselineId:baseline?.id||null,wbsChangeSetId:wbsChanges.changeSetId,wbsChangeCount:wbsChanges.changeCount}),now),
   ]);
-  return Response.json({projectId,status:toStatus,action,baseline});
+  return Response.json({projectId,status:toStatus,action,baseline,wbsChanges});
 }
