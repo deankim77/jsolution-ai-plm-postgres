@@ -27,7 +27,7 @@ async function ensureWbsChangeTables(db:D1){await db.batch([
 
 async function captureEditSnapshot(db:D1,projectId:string,now:number,actorUserId:string){
   await ensureWbsChangeTables(db);
-  const tasks=await db.prepare("SELECT w.id,w.wbs_code AS wbsCode,w.name,w.planned_start AS plannedStart,w.planned_end AS plannedEnd,w.duration_days AS durationDays,w.assignee_user_id AS assigneeUserId,u.name AS assigneeName,w.predecessor_code AS predecessorCode,w.sort_order AS sortOrder FROM wbs_tasks w LEFT JOIN users u ON u.id=w.assignee_user_id WHERE w.project_id=? ORDER BY w.sort_order").bind(projectId).all();
+  const tasks=await db.prepare("SELECT w.id,w.wbs_code AS wbsCode,w.name,w.planned_start AS plannedStart,w.planned_end AS plannedEnd,w.duration_days AS durationDays,w.assignee_user_id AS assigneeUserId,u.name AS assigneeName,NULL AS predecessorCode,w.sort_order AS sortOrder FROM wbs_tasks w LEFT JOIN users u ON u.id=w.assignee_user_id WHERE w.project_id=? ORDER BY w.sort_order").bind(projectId).all();
   await db.batch([
     db.prepare("DELETE FROM project_wbs_edit_snapshot_tasks WHERE project_id=?").bind(projectId),
     db.prepare("DELETE FROM project_wbs_edit_snapshots WHERE project_id=?").bind(projectId),
@@ -46,7 +46,7 @@ async function recordWbsChangeSet(db:D1,projectId:string,now:number,actorUserId:
   if(!snapshot)return {changeSetId:null,changeCount:0};
   const [beforeRows,currentRows]=await Promise.all([
     db.prepare("SELECT task_id AS id,wbs_code AS wbsCode,name,planned_start AS plannedStart,planned_end AS plannedEnd,duration_days AS durationDays,assignee_user_id AS assigneeUserId,assignee_name AS assigneeName,predecessor_code AS predecessorCode,sort_order AS sortOrder FROM project_wbs_edit_snapshot_tasks WHERE project_id=? ORDER BY sort_order").bind(projectId).all(),
-    db.prepare("SELECT w.id,w.wbs_code AS wbsCode,w.name,w.planned_start AS plannedStart,w.planned_end AS plannedEnd,w.duration_days AS durationDays,w.assignee_user_id AS assigneeUserId,u.name AS assigneeName,w.predecessor_code AS predecessorCode,w.sort_order AS sortOrder FROM wbs_tasks w LEFT JOIN users u ON u.id=w.assignee_user_id WHERE w.project_id=? ORDER BY w.sort_order").bind(projectId).all(),
+    db.prepare("SELECT w.id,w.wbs_code AS wbsCode,w.name,w.planned_start AS plannedStart,w.planned_end AS plannedEnd,w.duration_days AS durationDays,w.assignee_user_id AS assigneeUserId,u.name AS assigneeName,NULL AS predecessorCode,w.sort_order AS sortOrder FROM wbs_tasks w LEFT JOIN users u ON u.id=w.assignee_user_id WHERE w.project_id=? ORDER BY w.sort_order").bind(projectId).all(),
   ]);
   const before=(beforeRows.results??[]) as any[],current=(currentRows.results??[]) as any[];
   const beforeMap=new Map(before.map(task=>[String(task.id),task])),currentMap=new Map(current.map(task=>[String(task.id),task]));
@@ -56,7 +56,6 @@ async function recordWbsChangeSet(db:D1,projectId:string,now:number,actorUserId:
     if(!next){changes.push({taskId:String(oldTask.id),wbsCode:oldTask.wbsCode||"",taskName:oldTask.name||"",changeType:"TASK_DELETED",beforeValue:taskValue(oldTask),afterValue:null,sortOrder:Number(oldTask.sortOrder)||0});continue}
     if((oldTask.plannedStart||null)!==(next.plannedStart||null)||(oldTask.plannedEnd||null)!==(next.plannedEnd||null)||Number(oldTask.durationDays||1)!==Number(next.durationDays||1))changes.push({taskId:String(next.id),wbsCode:next.wbsCode||oldTask.wbsCode||"",taskName:next.name||oldTask.name||"",changeType:"SCHEDULE_CHANGE",beforeValue:scheduleValue(oldTask),afterValue:scheduleValue(next),sortOrder:Number(next.sortOrder)||0});
     if((oldTask.assigneeUserId||null)!==(next.assigneeUserId||null))changes.push({taskId:String(next.id),wbsCode:next.wbsCode||oldTask.wbsCode||"",taskName:next.name||oldTask.name||"",changeType:"ASSIGNEE_CHANGE",beforeValue:assigneeValue(oldTask),afterValue:assigneeValue(next),sortOrder:Number(next.sortOrder)||0});
-    if((oldTask.predecessorCode||null)!==(next.predecessorCode||null))changes.push({taskId:String(next.id),wbsCode:next.wbsCode||oldTask.wbsCode||"",taskName:next.name||oldTask.name||"",changeType:"PREDECESSOR_CHANGE",beforeValue:oldTask.predecessorCode||null,afterValue:next.predecessorCode||null,sortOrder:Number(next.sortOrder)||0});
   }
   for(const next of current){if(!beforeMap.has(String(next.id)))changes.push({taskId:String(next.id),wbsCode:next.wbsCode||"",taskName:next.name||"",changeType:"TASK_ADDED",beforeValue:null,afterValue:taskValue(next),sortOrder:Number(next.sortOrder)||0})}
   if(changes.length){
