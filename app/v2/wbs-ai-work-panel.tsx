@@ -18,5 +18,12 @@ export function WorkPanel(props:any){
   const contextTask=!props.task&&wbsOnly?(props.tasks??[]).find((task:any)=>task.id===items[0]?.id):undefined;
   const task=props.task??contextTask;
   if(props.tab==="history"&&task)return <HistoryWorkPanel {...props} task={task}/>;
-  return <><style>{`.wv2-panel>.wv2-panel-footer{display:none}`}</style><BaseWorkPanel {...props} task={task}/></>;
+  const gateActual=props.tab==="actual"&&task?.taskType==="gate";
+  return <>{gateActual&&<style>{`
+    .wv2-panel .wv2-form>.wv2-review-card,
+    .wv2-panel .wv2-form>.wv2-check,
+    .wv2-panel .wv2-form>.wv2-completion-check{display:none!important}
+    .wv2-panel .wv2-quick-progress>button:last-child{display:none!important}
+    .wv2-panel .wv2-form>p:first-of-type::after{content:" · Gate 완료는 Gate 탭에서 PASS 또는 조건부 승인으로 처리합니다.";font-weight:600;color:#52626d}
+  `}</style>}<style>{`.wv2-panel>.wv2-panel-footer{display:none}`}</style><BaseWorkPanel {...props} task={task}/></>;
 }
