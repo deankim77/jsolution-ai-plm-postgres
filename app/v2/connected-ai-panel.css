@@ -20,6 +20,8 @@
 .wv2-ai-panel-fill{flex:1 1 auto;min-height:180px;margin:0}
 .wv2-ai-panel-messages{flex:1 1 auto;min-height:0;overflow:auto}
 .wv2-ai-panel-input{flex:0 0 auto;margin-top:auto}
+.wv2-ai-panel-input>button{display:grid!important;place-items:center!important;padding:0!important;line-height:0!important}
+.wv2-ai-panel-input>button>svg{display:block;margin:0}
 .wv2-ai-recent-tab{flex:0 0 auto}
 .wv2-ai-recent-tab>header>span{color:var(--muted);font-size:var(--v2-font-size-caption)}
 .wv2-ai-recent-tab>div{max-height:118px}
