@@ -33,13 +33,15 @@ const drawingSelect = {
 
 export async function searchWorkflowDrawings(companyId: string, query = "", limit = 80): Promise<WorkflowDrawing[]> {
   const db = getDb();
-  const normalized = (query.trim().split(/\s+·\s+/)[0] ?? "").trim();
+  const segments = query.trim().split(/\s+·\s+/);
+  const normalized = ((segments[0] === "도면코드 없음" ? segments[1] : segments[0]) ?? "").trim();
   const conditions = [
     eq(projectsDb.companyId, companyId),
     sql`COALESCE(deliverables.document_kind, 'document') = 'drawing'`,
   ];
   if (normalized) {
     conditions.push(or(
+      ilike(deliverables.id, `%${normalized}%`),
       ilike(deliverables.drawingCode, `%${normalized}%`),
       ilike(deliverables.name, `%${normalized}%`),
       ilike(projectsDb.code, `%${normalized}%`),
