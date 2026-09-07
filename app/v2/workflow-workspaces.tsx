@@ -11,6 +11,6 @@ export const EcrWorkspace=lazyNamed(()=>import("./workflow-workspaces-impl").the
 export const MyWorkWorkflowWorkspace=lazyNamed(()=>import("./workflow-workspaces-impl").then(module=>({default:module.MyWorkWorkflowWorkspace})));
 export const ProjectWorkflowWorkspace=lazyNamed(()=>import("./workflow-workspaces-impl").then(module=>({default:module.ProjectWorkflowWorkspace})));
 export const QualityWorkspace=lazyNamed(()=>import("./workflow-workspaces-impl").then(module=>({default:module.QualityWorkspace})));
-export const SourceCreateWorkspace=lazyNamed(()=>import("./workflow-workspaces-impl").then(module=>({default:module.SourceCreateWorkspace})));
+export const SourceCreateWorkspace=lazyNamed(()=>import("./source-create-workspace").then(module=>({default:module.SourceCreateWorkspace})));
 export const WorkflowCreateWorkspace=lazyNamed(()=>import("./workflow-workspaces-impl").then(module=>({default:module.WorkflowCreateWorkspace})));
 export const WorkflowTemplateWorkspace=lazyNamed(()=>import("./workflow-workspaces-impl").then(module=>({default:module.WorkflowTemplateWorkspace})));
