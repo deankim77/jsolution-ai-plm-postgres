@@ -1,6 +1,9 @@
 /* Shared schedule header / freeze-pane treatment for Timeline and Gantt. */
 
 /* Timeline: keep the time-axis header visible while the WBS rows scroll. */
+.wv2-timeline-shell{
+  grid-template-rows:minmax(0,1fr) !important;
+}
 .wv2-timeline-scroll{
   overflow-x:hidden;
   overflow-y:auto;
@@ -55,6 +58,13 @@
 .wv2-timeline-shell .wv2-months>i[style*="#eef2f5"],
 .wv2-timeline-shell .wv2-timeline>button>i[style*="#eef2f5"]{
   border-left-color:#f4f6f8 !important;
+}
+
+/* Common WBS toolbar: keep a small visual gap between the legend and result count. */
+#Wv2-wbs-schedule-toolbar-slot,
+#wv2-wbs-schedule-toolbar-slot{
+  padding-right:10px;
+  box-sizing:border-box;
 }
 
 /* Gantt: use the exact same header palette / typography. */
