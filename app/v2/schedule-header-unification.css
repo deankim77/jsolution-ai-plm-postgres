@@ -113,6 +113,12 @@
   z-index:5;
   background:#fff;
 }
+/* Do not stretch the time canvas into unused vertical space. Its absolute
+   month/week/today guides now stop at the last visible WBS row, matching Timeline. */
+.wv2-gantt-time{
+  align-self:start;
+  height:max-content;
+}
 
 /* Timeline helper lines should remain subordinate to month/week boundaries. */
 .wv2-timeline>button>i{
