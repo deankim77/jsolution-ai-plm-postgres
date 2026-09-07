@@ -35,6 +35,7 @@ type ChatInput = {
   contextTitle?: string;
 };
 type ContextFile = {
+  contextId: string;
   deliverableId: string;
   title: string;
   fileName: string;
@@ -155,20 +156,31 @@ async function findDeliverableVersion(db: D1, item: ContextItem, projectName: st
     ORDER BY v.created_at DESC,v.revision DESC LIMIT 1`).bind(companyId, title).first<any>();
 }
 
+async function findSourceAttachment(db:D1,item:ContextItem,companyId:string){
+  if(!item.id)return null;
+  return await db.prepare(`SELECT id AS attachmentId,file_key AS fileKey,file_name AS fileName,
+    file_size AS fileSize,content_type AS contentType
+    FROM workflow_source_attachments
+    WHERE id=? AND company_id=?`).bind(item.id,companyId).first<any>();
+}
+
 async function resolveContextFiles(db: D1, filesBucket: R2Bucket | undefined, items: ContextItem[], projectName: string, companyId:string) {
   if (!filesBucket) return [] as ContextFile[];
-  const deliverableItems = items.filter(item => item.kind === "산출물" || item.kind === "문서").slice(0, MAX_CONTEXT_FILES);
+  const fileItems = items.filter(item => item.kind === "산출물" || item.kind === "문서" || item.kind === "요청 첨부문서").slice(0, MAX_CONTEXT_FILES);
   const resolved: ContextFile[] = [];
-  for (const item of deliverableItems) {
-    const version = await findDeliverableVersion(db, item, projectName,companyId);
+  for (const item of fileItems) {
+    const isSourceAttachment=item.kind==="요청 첨부문서";
+    const version = isSourceAttachment?await findSourceAttachment(db,item,companyId):await findDeliverableVersion(db, item, projectName,companyId);
     if (!version?.fileKey || Number(version.fileSize || 0) > MAX_CONTEXT_FILE_BYTES) continue;
     const object = await filesBucket.get(String(version.fileKey));
     if (!object) continue;
     const buffer = await new Response(object.body).arrayBuffer();
     if (!buffer.byteLength || buffer.byteLength > MAX_CONTEXT_FILE_BYTES) continue;
+    const contextId=String(isSourceAttachment?version.attachmentId:version.deliverableId);
     resolved.push({
-      deliverableId: String(version.deliverableId),
-      title: String(version.title || item.title || "산출물"),
+      contextId,
+      deliverableId: contextId,
+      title: String(isSourceAttachment?item.title||version.fileName:version.title || item.title || "산출물"),
       fileName: String(version.fileName || "document"),
       contentType: version.contentType ? String(version.contentType) : undefined,
       revision: Number(version.revision || 0),
@@ -199,7 +211,7 @@ async function callOpenAI(projectName: string, contextItems: ContextItem[], cont
   ];
   const response = await fetch("https://api.openai.com/v1/responses", {
     method: "POST",
-    headers: { "content-type": "application/json", authorization: `Bearer ${apiKey}` },
+    headers: { "content-type": "application/json", authorization:`Bearer ${apiKey}` },
     body: JSON.stringify({ model, input, store:false, reasoning:{effort:"minimal"}, max_output_tokens:MAX_OUTPUT_TOKENS, prompt_cache_key:PROMPT_CACHE_KEY }),
   });
   const data = await response.json() as OpenAIResponse;
@@ -230,8 +242,8 @@ export async function POST(request: Request) {
     : { results: [] as any[] };
   const history = [...(previous.results || [])].reverse().filter(row => !/OpenAI (파일 분석|응답|연결)/.test(String(row.content || "")));
   const persistedContext = contextItems.map(item => {
-    const file = contextFiles.find(candidate => candidate.deliverableId === item.id || candidate.title === item.title);
-    return file ? { ...item, id: file.deliverableId, fileName: file.fileName, revision: file.revision, fileAttached: true } : item;
+    const file = contextFiles.find(candidate => candidate.contextId === item.id || candidate.title === item.title);
+    return file ? { ...item, id: file.contextId, fileName: file.fileName, revision: file.revision, fileAttached: true } : item;
   });
   const source = input.source?.trim() || "일정 · WBS";
   const contextType = input.contextType?.trim() || "mixed";
@@ -266,10 +278,10 @@ export async function POST(request: Request) {
       );
     }
     await db.batch([
-      db.prepare(`INSERT INTO ai_messages (id,conversation_id,role,content,citations,created_at) VALUES (?,?,?,?,?,?)`).bind(crypto.randomUUID(), conversationId, "assistant", generated.answer, JSON.stringify(analyzedFiles.map(file => ({ type:"deliverable_file", deliverableId:file.deliverableId, fileName:file.fileName, revision:file.revision }))), now + 1),
+      db.prepare(`INSERT INTO ai_messages (id,conversation_id,role,content,citations,created_at) VALUES (?,?,?,?,?,?)`).bind(crypto.randomUUID(), conversationId, "assistant", generated.answer, JSON.stringify(analyzedFiles.map(file => ({ type:"context_file", contextId:file.contextId, fileName:file.fileName, revision:file.revision }))), now + 1),
       db.prepare("UPDATE ai_conversations SET updated_at=? WHERE id=? AND company_id=? AND user_id=?").bind(now + 1, conversationId, context.companyId, context.userId),
     ]);
-    return Response.json({ ok:true, conversationId, answer:generated.answer, warning, fileFallback:Boolean(warning), model:generated.model, responseId:generated.responseId, attachedFiles:analyzedFiles.map(file => ({ deliverableId:file.deliverableId, fileName:file.fileName, revision:file.revision, bytes:file.bytes, contentType:file.contentType || "" })) });
+    return Response.json({ ok:true, conversationId, answer:generated.answer, warning, fileFallback:Boolean(warning), model:generated.model, responseId:generated.responseId, attachedFiles:analyzedFiles.map(file => ({ contextId:file.contextId, deliverableId:file.deliverableId, fileName:file.fileName, revision:file.revision, bytes:file.bytes, contentType:file.contentType || "" })) });
   } catch (error) {
     const detail = error instanceof Error ? error.message : "AI 응답을 생성하지 못했습니다.";
     const savedNotice = `${aiConnectionMessage(detail)} 질문은 MY AI 대화에 저장되었습니다.`;
