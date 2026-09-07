@@ -185,7 +185,12 @@ async function callOpenAI(projectName: string, contextItems: ContextItem[], cont
   const model = process.env.OPENAI_MODEL?.trim() || "gpt-5-mini";
   const userContent: any[] = [{ type: "input_text", text: message }];
   for (const file of contextFiles) {
-    userContent.push({ type: "input_file", filename: file.fileName, file_data: toFileDataUrl(file) });
+    const dataUrl=toFileDataUrl(file);
+    if ((file.contentType||"").toLowerCase().startsWith("image/")) {
+      userContent.push({ type: "input_image", image_url: dataUrl, detail: "high" });
+    } else {
+      userContent.push({ type: "input_file", filename: file.fileName, file_data: dataUrl });
+    }
   }
   const input: any[] = [
     { role: "developer", content: buildSystemPrompt(projectName, contextItems, contextFiles) },
