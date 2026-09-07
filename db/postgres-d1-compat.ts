@@ -128,6 +128,23 @@ function restoreLegacyAliases<T = Record<string, unknown>>(sourceSql: string, ro
   });
 }
 
+function boundValueTypes(values: unknown[]) {
+  return values.map(value => value === null ? "null" : value instanceof Date ? "Date" : typeof value);
+}
+
+function postgresCompatError(error: unknown, sourceSql: string, translatedSql: string, values: unknown[]) {
+  const message = error instanceof Error ? error.message : String(error);
+  const detail = [
+    message,
+    "[postgres-d1-compat] source SQL: " + sourceSql,
+    "[postgres-d1-compat] translated SQL: " + translatedSql,
+    "[postgres-d1-compat] bound value types: " + JSON.stringify(boundValueTypes(values)),
+  ].join("\n");
+  const wrapped = new Error(detail);
+  (wrapped as Error & { cause?: unknown }).cause = error;
+  return wrapped;
+}
+
 class Statement implements LegacyD1Statement {
   private values: unknown[] = [];
 
@@ -139,18 +156,33 @@ class Statement implements LegacyD1Statement {
   }
 
   async all<T = Record<string, unknown>>() {
-    const result = await this.pool.query(translateSql(this.sourceSql, this.values), normalizeBoundValues(this.values));
-    return { results: restoreLegacyAliases(this.sourceSql, result.rows as T[]) };
+    const translatedSql = translateSql(this.sourceSql, this.values);
+    try {
+      const result = await this.pool.query(translatedSql, normalizeBoundValues(this.values));
+      return { results: restoreLegacyAliases(this.sourceSql, result.rows as T[]) };
+    } catch (error) {
+      throw postgresCompatError(error, this.sourceSql, translatedSql, this.values);
+    }
   }
 
   async first<T = Record<string, unknown>>() {
-    const result = await this.pool.query(translateSql(this.sourceSql, this.values), normalizeBoundValues(this.values));
-    return restoreLegacyAliases(this.sourceSql, result.rows as T[])[0] ?? null;
+    const translatedSql = translateSql(this.sourceSql, this.values);
+    try {
+      const result = await this.pool.query(translatedSql, normalizeBoundValues(this.values));
+      return restoreLegacyAliases(this.sourceSql, result.rows as T[])[0] ?? null;
+    } catch (error) {
+      throw postgresCompatError(error, this.sourceSql, translatedSql, this.values);
+    }
   }
 
   async run() {
-    const result = await this.pool.query(translateSql(this.sourceSql, this.values), normalizeBoundValues(this.values));
-    return { success: true, meta: { changes: result.rowCount ?? 0 } };
+    const translatedSql = translateSql(this.sourceSql, this.values);
+    try {
+      const result = await this.pool.query(translatedSql, normalizeBoundValues(this.values));
+      return { success: true, meta: { changes: result.rowCount ?? 0 } };
+    } catch (error) {
+      throw postgresCompatError(error, this.sourceSql, translatedSql, this.values);
+    }
   }
 }
 
@@ -173,8 +205,13 @@ function createLegacyDbCompat(): LegacyD1Compat {
           if (!(statement instanceof Statement)) throw new Error("Unsupported legacy statement implementation");
           const privateStatement = statement as Statement & { sourceSql: string; values: unknown[] };
           const values = normalizeBoundValues(privateStatement.values);
-          const result = await client.query(translateSql(privateStatement.sourceSql, privateStatement.values), values);
-          results.push({ success: true, meta: { changes: result.rowCount ?? 0 }, results: restoreLegacyAliases(privateStatement.sourceSql, result.rows) });
+          const translatedSql = translateSql(privateStatement.sourceSql, privateStatement.values);
+          try {
+            const result = await client.query(translatedSql, values);
+            results.push({ success: true, meta: { changes: result.rowCount ?? 0 }, results: restoreLegacyAliases(privateStatement.sourceSql, result.rows) });
+          } catch (error) {
+            throw postgresCompatError(error, privateStatement.sourceSql, translatedSql, privateStatement.values);
+          }
         }
         await client.query("COMMIT");
         return results;
