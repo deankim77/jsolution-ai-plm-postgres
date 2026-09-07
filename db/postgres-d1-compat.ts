@@ -13,7 +13,27 @@ export type LegacyD1Compat = {
   batch: (statements: LegacyD1Statement[]) => Promise<unknown[]>;
 };
 
-function replaceQuestionPlaceholders(sql: string) {
+function placeholderFor(index: number, value: unknown) {
+  const token = `$${index}`;
+  if (typeof value === "bigint") return `CAST(${token} AS BIGINT)`;
+  if (typeof value === "number" && Number.isFinite(value)) {
+    if (Number.isInteger(value)) {
+      return value >= -2147483648 && value <= 2147483647
+        ? `CAST(${token} AS INTEGER)`
+        : `CAST(${token} AS BIGINT)`;
+    }
+    return `CAST(${token} AS DOUBLE PRECISION)`;
+  }
+  if (typeof value === "boolean") return `CAST(${token} AS BOOLEAN)`;
+  if (value instanceof Date) return `CAST(${token} AS TIMESTAMPTZ)`;
+  return token;
+}
+
+function normalizeBoundValues(values: unknown[]) {
+  return values.map(value => typeof value === "bigint" ? value.toString() : value);
+}
+
+function replaceQuestionPlaceholders(sql: string, values: unknown[] = []) {
   let index = 0;
   let quote: "'" | '"' | null = null;
   let out = "";
@@ -31,7 +51,7 @@ function replaceQuestionPlaceholders(sql: string) {
     }
     if (ch === "?") {
       index += 1;
-      out += `$${index}`;
+      out += placeholderFor(index, values[index - 1]);
       continue;
     }
     out += ch;
@@ -39,7 +59,7 @@ function replaceQuestionPlaceholders(sql: string) {
   return out;
 }
 
-function translateSql(input: string) {
+function translateSql(input: string, values: unknown[] = []) {
   let sql = input.trim();
 
   const pragma = sql.match(/^PRAGMA\s+table_info\(([^)]+)\)\s*;?$/i);
@@ -57,9 +77,12 @@ function translateSql(input: string) {
   if (/information_schema\.tables/i.test(sql) && /table_name\s+IN\s*\(\$1\)/i.test(sql)) {
     const originalIn = input.match(/name\s+IN\s*\(([^)]+)\)/i)?.[1] ?? "?";
     const count = (originalIn.match(/\?/g) ?? []).length || 1;
-    sql = sql.replace(/table_name\s+IN\s*\(\$1\)/i, `table_name IN (${Array.from({ length: count }, (_, i) => `$${i + 1}`).join(",")})`);
+    sql = sql.replace(
+      /table_name\s+IN\s*\(\$1\)/i,
+      `table_name IN (${Array.from({ length: count }, (_, i) => placeholderFor(i + 1, values[i])).join(",")})`
+    );
   } else {
-    sql = replaceQuestionPlaceholders(sql);
+    sql = replaceQuestionPlaceholders(sql, values);
   }
 
   if (/^INSERT\s+OR\s+IGNORE\s+INTO\b/i.test(sql)) {
@@ -116,17 +139,17 @@ class Statement implements LegacyD1Statement {
   }
 
   async all<T = Record<string, unknown>>() {
-    const result = await this.pool.query(translateSql(this.sourceSql), this.values);
+    const result = await this.pool.query(translateSql(this.sourceSql, this.values), normalizeBoundValues(this.values));
     return { results: restoreLegacyAliases(this.sourceSql, result.rows as T[]) };
   }
 
   async first<T = Record<string, unknown>>() {
-    const result = await this.pool.query(translateSql(this.sourceSql), this.values);
+    const result = await this.pool.query(translateSql(this.sourceSql, this.values), normalizeBoundValues(this.values));
     return restoreLegacyAliases(this.sourceSql, result.rows as T[])[0] ?? null;
   }
 
   async run() {
-    const result = await this.pool.query(translateSql(this.sourceSql), this.values);
+    const result = await this.pool.query(translateSql(this.sourceSql, this.values), normalizeBoundValues(this.values));
     return { success: true, meta: { changes: result.rowCount ?? 0 } };
   }
 }
@@ -149,7 +172,8 @@ function createLegacyDbCompat(): LegacyD1Compat {
         for (const statement of statements) {
           if (!(statement instanceof Statement)) throw new Error("Unsupported legacy statement implementation");
           const privateStatement = statement as Statement & { sourceSql: string; values: unknown[] };
-          const result = await client.query(translateSql(privateStatement.sourceSql), privateStatement.values);
+          const values = normalizeBoundValues(privateStatement.values);
+          const result = await client.query(translateSql(privateStatement.sourceSql, privateStatement.values), values);
           results.push({ success: true, meta: { changes: result.rowCount ?? 0 }, results: restoreLegacyAliases(privateStatement.sourceSql, result.rows) });
         }
         await client.query("COMMIT");
