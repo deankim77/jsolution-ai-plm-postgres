@@ -1,10 +1,13 @@
 import { Pool } from "pg";
 import { drizzle } from "drizzle-orm/node-postgres";
 import * as schema from "./schema";
+import * as workflowPartSchema from "./workflow-part-schema";
 
 const globalForDb = globalThis as typeof globalThis & {
   __aiPlmPgPool?: Pool;
 };
+
+const databaseSchema = { ...schema, ...workflowPartSchema };
 
 function getPool() {
   const connectionString = process.env.DATABASE_URL;
@@ -25,7 +28,7 @@ function getPool() {
 }
 
 export function getDb() {
-  return drizzle(getPool(), { schema });
+  return drizzle(getPool(), { schema: databaseSchema });
 }
 
 export function getDbPool() {
