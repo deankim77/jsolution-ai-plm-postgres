@@ -3,6 +3,7 @@ import {
   findWorkflowDrawing,
   listWorkflowSourceDrawings,
   replaceWorkflowSourceDrawingLinks,
+  searchWorkflowDrawings,
   type WorkflowDrawing,
   type WorkflowDrawingSourceType,
 } from "../db/repositories/workflow-drawing-repository";
@@ -20,11 +21,15 @@ function isMissingDrawingLinkTable(reason: unknown) {
   return code === "42P01" || /relation ["']workflow_source_drawing_links["'] does not exist/i.test(message);
 }
 
-export async function requireWorkflowDrawing(companyId: string, projectId: string, drawingId: string): Promise<WorkflowDrawing> {
+export async function listWorkflowDrawingOptions(companyId: string, query = "") {
+  return searchWorkflowDrawings(companyId, query, 80);
+}
+
+export async function requireWorkflowDrawing(companyId: string, drawingId: string): Promise<WorkflowDrawing> {
   const normalized = drawingId.trim();
   if (!normalized) throw new Error("관련 도면을 선택해 주세요.");
-  const drawing = await findWorkflowDrawing(companyId, projectId, normalized);
-  if (!drawing) throw new Error("선택한 프로젝트의 도면을 찾을 수 없습니다.");
+  const drawing = await findWorkflowDrawing(companyId, normalized);
+  if (!drawing) throw new Error("선택한 도면을 찾을 수 없습니다.");
   return drawing;
 }
 
