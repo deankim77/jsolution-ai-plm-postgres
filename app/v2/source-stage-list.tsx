@@ -9,7 +9,7 @@ type SourceRow={
   workflowStatus?:string;status:string;currentStepOrder?:number;currentStepName?:string;currentAssigneeName?:string;
   stepCount?:number;stepFlow?:string;dueDate?:string;
   ecrNumber?:string;qualityNumber?:string;changeType?:string;changeTarget?:string;priority?:string;
-  issueType?:string;severity?:string;drawingCode?:string;drawingName?:string;
+  issueType?:string;severity?:string;drawingCode?:string;drawingName?:string;drawingProjectCode?:string;drawingProjectName?:string;
   partId?:string;partNumber?:string;partName?:string;partRevision?:string;partType?:string;partSpec?:string;
 };
 
@@ -24,7 +24,7 @@ export function SourceStageList({kind,rows,onOpen}:{kind:"ECR"|"QUALITY";rows:So
   const {data,loading}=useMasterData();
   const codeLabel=(groupCode:string,code?:string)=>masterCodeLabel(data,groupCode,code);
   const partText=(row:SourceRow)=>row.partNumber?`${row.partNumber} · ${row.partName||"품명 미지정"}${row.partRevision?` · Rev.${row.partRevision}`:""}`:"PART 미지정";
-  const drawingText=(row:SourceRow)=>row.drawingCode?`${row.drawingCode}${row.drawingName?` · ${row.drawingName}`:""}`:"도면 미지정";
+  const drawingText=(row:SourceRow)=>row.drawingCode?`${row.drawingCode}${row.drawingName?` · ${row.drawingName}`:""}${row.drawingProjectCode?` · ${row.drawingProjectCode}${row.drawingProjectName?` ${row.drawingProjectName}`:""}`:""}`:"도면 미지정";
   const contextFor=(row:SourceRow)=>{const status=row.workflowStatus||row.status,number=ecr?row.ecrNumber:row.qualityNumber,type=ecr?(codeLabel("DESIGN_CHANGE_TYPE",row.changeType)||row.changeType||"유형 미지정"):(codeLabel("QUALITY_ISSUE_TYPE",row.issueType)||row.issueType||"유형 미지정"),severity=ecr?(row.priority?`우선순위 ${priorityLabels[row.priority]||row.priority}`:"우선순위 미지정"):(severityLabels[row.severity||""]||"심각도 미지정");return {id:row.id,kind:ecr?"설계변경":"품질관리",title:`${number?`[${number}] `:""}${row.title}`,meta:`${row.projectName} · 관련 PART ${partText(row)} · 관련 도면 ${drawingText(row)} · 현재 단계 ${row.currentStepName||"작성"} · 처리자 ${row.currentAssigneeName||"미배정"} · ${type} · ${severity} · 기한 ${row.dueDate||"미정"} · ${statusLabels[status]||status}`}};
   const selectable=rows.filter(row=>Boolean(row.workflowId));
   const allSelected=Boolean(selectable.length)&&selectable.every(row=>selection.has(contextFor(row)));
