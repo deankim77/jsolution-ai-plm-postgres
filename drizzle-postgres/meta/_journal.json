@@ -29,6 +29,13 @@
       "when": 1788290196958,
       "tag": "0003_amazing_wallop",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1788791400000,
+      "tag": "0004_workflow_part_links",
+      "breakpoints": true
     }
   ]
 }
