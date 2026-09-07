@@ -18,12 +18,15 @@ export async function GET(request:Request,{params}:{params:Promise<{projectId:st
   const {projectId}=await params,db=await runtimeDb();
   let context;try{context=await resolveRequestContext(request,db);await requireProjectAccess(db,context,projectId)}catch(reason){return contextErrorResponse(reason)??Response.json({error:"프로젝트 접근 권한을 확인하지 못했습니다."},{status:403})}
   await ensureTables(db);
-  const url=new URL(request.url),taskId=String(url.searchParams.get("taskId")||"").trim();
-  const requested=Math.max(1,Math.min(100,Number(url.searchParams.get("limit")||30))),limit=requested+1;
-  const sql=taskId
-    ?`SELECT i.id,i.change_set_id AS changeSetId,i.task_id AS taskId,i.wbs_code AS wbsCode,i.task_name AS taskName,i.change_type AS changeType,i.before_value AS beforeValue,i.after_value AS afterValue,i.sort_order AS sortOrder,s.checked_in_at AS checkedInAt,s.checked_in_by AS checkedInBy,u.name AS changedBy FROM project_wbs_change_items i JOIN project_wbs_change_sets s ON s.id=i.change_set_id LEFT JOIN users u ON u.id=s.checked_in_by WHERE i.project_id=? AND i.task_id=? ORDER BY s.checked_in_at DESC,i.sort_order,i.id LIMIT ?`
-    :`SELECT i.id,i.change_set_id AS changeSetId,i.task_id AS taskId,i.wbs_code AS wbsCode,i.task_name AS taskName,i.change_type AS changeType,i.before_value AS beforeValue,i.after_value AS afterValue,i.sort_order AS sortOrder,s.checked_in_at AS checkedInAt,s.checked_in_by AS checkedInBy,u.name AS changedBy FROM project_wbs_change_items i JOIN project_wbs_change_sets s ON s.id=i.change_set_id LEFT JOIN users u ON u.id=s.checked_in_by WHERE i.project_id=? ORDER BY s.checked_in_at DESC,i.sort_order,i.id LIMIT ?`;
-  const rows=taskId?await db.prepare(sql).bind(projectId,taskId,limit).all():await db.prepare(sql).bind(projectId,limit).all();
-  const result=(rows.results??[]) as any[],hasMore=result.length>requested,items=result.slice(0,requested).map(row=>({...row,beforeValue:parseValue(row.beforeValue),afterValue:parseValue(row.afterValue)}));
-  return Response.json({items,hasMore,limit:requested});
+  const url=new URL(request.url),requested=Math.max(1,Math.min(50,Number(url.searchParams.get("limit")||20)));
+  const setsRows=await db.prepare("SELECT s.id,s.checked_in_at AS checkedInAt,s.checked_in_by AS checkedInBy,u.name AS changedBy FROM project_wbs_change_sets s LEFT JOIN users u ON u.id=s.checked_in_by WHERE s.project_id=? ORDER BY s.checked_in_at DESC LIMIT ?").bind(projectId,requested).all();
+  const sets=(setsRows.results??[]) as any[];
+  if(!sets.length)return Response.json({sets:[],latest:null,hasMore:false});
+  const ids=sets.map(set=>String(set.id));
+  const placeholders=ids.map(()=>"?").join(",");
+  const itemsRows=await db.prepare(`SELECT id,change_set_id AS changeSetId,task_id AS taskId,wbs_code AS wbsCode,task_name AS taskName,change_type AS changeType,before_value AS beforeValue,after_value AS afterValue,sort_order AS sortOrder FROM project_wbs_change_items WHERE project_id=? AND change_set_id IN (${placeholders}) ORDER BY sort_order,id`).bind(projectId,...ids).all();
+  const bySet=new Map<string,any[]>();
+  for(const row of (itemsRows.results??[]) as any[]){const item={...row,beforeValue:parseValue(row.beforeValue),afterValue:parseValue(row.afterValue)};const list=bySet.get(String(row.changeSetId))??[];list.push(item);bySet.set(String(row.changeSetId),list)}
+  const output=sets.map(set=>{const items=bySet.get(String(set.id))??[];const taskIds=new Set(items.map(item=>item.taskId).filter(Boolean));const counts=items.reduce((acc:any,item:any)=>{acc[item.changeType]=(acc[item.changeType]||0)+1;return acc},{});return {...set,items,changeCount:items.length,taskCount:taskIds.size,counts}});
+  return Response.json({sets:output,latest:output[0]??null,hasMore:sets.length===requested});
 }
