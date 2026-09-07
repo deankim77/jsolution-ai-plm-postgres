@@ -119,23 +119,23 @@ export async function POST(request:Request,{params}:{params:Promise<{projectId:s
     return Response.json({ok:true,status:nextStatus,progress:nextProgress,warnings,message:approved?"Task 완료를 승인했습니다.":"보완 요청으로 Task를 진행 중 상태로 전환했습니다."});
   }
   if(task.assigneeUserId!==context.userId)return Response.json({error:"담당자 본인만 Task 실적을 등록할 수 있습니다."},{status:403});
-  const rawProgress=Math.max(0,Math.min(100,Number(input.progress)||0));const gateTask=task.taskType==="gate";const completed=!gateTask&&(Boolean(input.completed)||rawProgress>=100);const nextProgress=gateTask&&task.status==="completed"?100:completed?100:rawProgress;const nextStatus=gateTask?(task.status==="completed"?"completed":nextProgress>0?"active":task.status==="planned"?"active":task.status):completed?"completed":nextProgress>0?"active":task.status==="planned"?"active":task.status;
+  const rawProgress=Math.max(0,Math.min(100,Number(input.progress)||0));const gateTask=task.taskType==="gate";const completed=Boolean(input.completed)||rawProgress>=100;const nextProgress=completed?100:rawProgress;const nextStatus=completed?"completed":nextProgress>0?"active":task.status==="planned"?"active":task.status;
   if(completed){
     if(!input.completionConfirmed)return Response.json({error:"완료 조건을 확인한 뒤 Task 완료를 저장해 주세요."},{status:400});
     const known=new Set(["PROGRESS","REQUIRED_UPLOAD","REQUIRED_APPROVAL","CHILD_COMPLETE","GATE_APPROVAL","OWNER_CONFIRM"]),parsed=new Set((task.completionCriteria||"").split(",").map(value=>value.trim()).filter(value=>known.has(value)));if(!parsed.size){parsed.add("PROGRESS");parsed.add("REQUIRED_UPLOAD")}
     if(parsed.has("REQUIRED_UPLOAD")||parsed.has("REQUIRED_APPROVAL")){const accepted=parsed.has("REQUIRED_APPROVAL")?"('approved','completed')":"('submitted','approved','completed')";const missing=await db.prepare(`SELECT name FROM deliverables WHERE project_id=? AND task_id=? AND required=1 AND status NOT IN ${accepted} ORDER BY created_at`).bind(projectId,task.id).all();const names=(missing.results??[]).map((item:{name?:string})=>item.name).filter(Boolean);if(names.length)warnings.push(`${parsed.has("REQUIRED_APPROVAL")?"필수 산출물 승인 미완료":"필수 산출물 미등록"}: ${names.join(", ")}`)}
     if(parsed.has("CHILD_COMPLETE")){const children=await db.prepare("SELECT name FROM wbs_tasks WHERE project_id=? AND parent_id=? AND kind<>'summary' AND status<>'completed' ORDER BY sort_order").bind(projectId,task.id).all();const names=(children.results??[]).map((item:{name?:string})=>item.name).filter(Boolean);if(names.length)warnings.push(`하위 업무 미완료: ${names.join(", ")}`)}
   }
-  const completionActor=task.completionActor||"assignee";const requiresReview=completed&&["PM","PL"].includes(completionActor);const storedCompleted=completed&&!requiresReview;const storedStatus=requiresReview?"review":nextStatus;
+  const completionActor=task.completionActor||"assignee";const requiresReview=completed&&!gateTask&&["PM","PL"].includes(completionActor);const storedCompleted=completed&&!requiresReview;const storedStatus=requiresReview?"review":nextStatus;
   const id=crypto.randomUUID();
   await db.batch([
     db.prepare("INSERT INTO task_actuals (id,project_id,task_id,user_id,actual_date,actual_hours,progress,work_note,completed,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?)")
       .bind(id,projectId,task.id,context.userId,actualDate,Math.max(0,Number(input.actualHours)||0),nextProgress,input.workNote?.trim()||null,storedCompleted?1:0,now,now),
     db.prepare("UPDATE wbs_tasks SET progress=?,status=?,updated_at=? WHERE id=? AND project_id=?").bind(nextProgress,storedStatus,now,task.id,projectId),
     db.prepare("INSERT INTO audit_logs (id,company_id,actor_user_id,action,entity_type,entity_id,detail,created_at) VALUES (?,?,?,?,?,?,?,?)")
-      .bind(crypto.randomUUID(),context.companyId,context.userId,gateTask?"GATE_ACTUAL_RECORDED":requiresReview?"TASK_COMPLETION_REQUESTED":completed?"TASK_COMPLETED":"TASK_ACTUAL_RECORDED","WBS_TASK",task.id,JSON.stringify({projectId,actualId:id,actualDate,actualHours:Math.max(0,Number(input.actualHours)||0),progress:nextProgress,workNote:input.workNote?.trim()||null,completionActor,warnings}),now),
+      .bind(crypto.randomUUID(),context.companyId,context.userId,gateTask&&completed?"GATE_TASK_COMPLETED":gateTask?"GATE_ACTUAL_RECORDED":requiresReview?"TASK_COMPLETION_REQUESTED":completed?"TASK_COMPLETED":"TASK_ACTUAL_RECORDED","WBS_TASK",task.id,JSON.stringify({projectId,actualId:id,actualDate,actualHours:Math.max(0,Number(input.actualHours)||0),progress:nextProgress,workNote:input.workNote?.trim()||null,completionActor,warnings}),now),
   ]);
   await recalculateGroupProgress(db,projectId);
-  const baseMessage=gateTask?"Gate 실적을 저장했습니다. 완료는 Gate Review에서 PASS 또는 조건부 승인으로 처리합니다.":requiresReview?`${task.completionActor} 완료 검토를 요청했습니다.`:completed?"Task를 완료했습니다.":"실적을 저장했습니다.";
+  const baseMessage=gateTask&&completed?"Gate Task를 완료했습니다.":gateTask?"Gate 실적을 저장했습니다.":requiresReview?`${task.completionActor} 완료 검토를 요청했습니다.`:completed?"Task를 완료했습니다.":"실적을 저장했습니다.";
   return Response.json({ok:true,id,status:storedStatus,progress:nextProgress,warnings,message:warnings.length?`${baseMessage} 확인: ${warnings.join(" / ")}`:baseMessage});
 }
