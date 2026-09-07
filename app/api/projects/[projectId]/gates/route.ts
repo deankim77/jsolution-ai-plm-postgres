@@ -46,10 +46,10 @@ export async function POST(request:Request,{params}:{params:Promise<{projectId:s
   const warnings=decision==="PASS"&& (incompleteTasks.length||missingDeliverables.length)
     ? {incompleteTasks,missingDeliverables,message:`미완료 활동 ${incompleteTasks.length}건 · 필수 산출물 미충족 ${missingDeliverables.length}건을 확인하고 승인했습니다.`}
     : null;
-  const now=Math.floor(Date.now()/1000),gateCode=normalizeGateCode(gate.wbsCode);
+  const now=Math.floor(Date.now()/1000),gateCode=normalizeGateCode(gate.wbsCode),completed=decision==="PASS"||decision==="CONDITIONAL_PASS";
   await db.batch([
     db.prepare("INSERT INTO project_gate_decisions (id,project_id,gate_task_id,gate_code,decision,note,decided_by,decided_at) VALUES (?,?,?,?,?,?,?,?)").bind(crypto.randomUUID(),projectId,gate.id,gateCode,decision,input.note?.trim()||null,context.userId,now),
-    db.prepare("UPDATE wbs_tasks SET status=?,progress=?,updated_at=? WHERE id=? AND project_id=?").bind(decision==="PASS"?"completed":"review",decision==="PASS"?100:95,now,gate.id,projectId),
+    db.prepare("UPDATE wbs_tasks SET status=?,progress=?,updated_at=? WHERE id=? AND project_id=?").bind(completed?"completed":"review",completed?100:95,now,gate.id,projectId),
     db.prepare("INSERT INTO audit_logs (id,company_id,actor_user_id,action,entity_type,entity_id,detail,created_at) VALUES (?,?,?,?,?,?,?,?)").bind(crypto.randomUUID(),context.companyId,context.userId,"GATE_DECIDED","WBS_TASK",gate.id,JSON.stringify({projectId,gateCode,decision,note:input.note?.trim()||null,warnings}),now),
   ]);
   return Response.json({ok:true,projectId,taskId:gate.id,gateCode,decision,decidedAt:now,warnings});
