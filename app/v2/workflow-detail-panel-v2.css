@@ -37,11 +37,14 @@
 .wv2-current-step-action-head>.wv2-step-attachment-add:hover{border-color:#9dcac6;color:var(--teal-dark);background:#f5fbfa}
 .wv2-current-step-attachments{display:grid!important;gap:5px!important;margin-top:10px!important;padding-top:9px;border-top:1px solid #dfe9ec}
 .wv2-current-step-attachments>small{color:var(--muted);font-size:var(--v2-font-size-caption);font-weight:800}
-.wv2-current-step-attachments>a{display:grid;grid-template-columns:18px minmax(0,1fr);align-items:center;gap:7px;border:0;border-radius:6px;background:#fff;padding:6px 8px;color:inherit;text-decoration:none}
-.wv2-current-step-attachments>a:hover{background:#f3f8f8}
-.wv2-current-step-attachments>a>span{display:grid;min-width:0;gap:1px}
-.wv2-current-step-attachments>a b{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:var(--v2-font-size-control)}
-.wv2-current-step-attachments>a small{color:var(--muted);font-size:var(--v2-font-size-caption)}
+.wv2-current-step-output-row{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:6px}
+.wv2-current-step-output-row>a{display:grid;grid-template-columns:18px minmax(0,1fr);align-items:center;gap:7px;border:0;border-radius:6px;background:#fff;padding:6px 8px;color:inherit;text-decoration:none;min-width:0}
+.wv2-current-step-output-row>a:hover{background:#f3f8f8}
+.wv2-current-step-output-row>a>span{display:grid;min-width:0;gap:1px}
+.wv2-current-step-output-row>a b{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:var(--v2-font-size-control)}
+.wv2-current-step-output-row>a small{color:var(--muted);font-size:var(--v2-font-size-caption)}
+.wv2-current-step-output-row>.wv2-step-output-delete{min-width:28px!important;width:auto;height:28px;min-height:28px!important;padding:0 7px!important;border-color:#ead2d0!important;color:#b42318!important;background:#fff!important;font-size:var(--v2-font-size-caption)!important}
+.wv2-current-step-output-row>.wv2-step-output-delete:hover{background:#fff7f6!important;border-color:#d8aaa5!important}
 .wv2-workflow-documents{display:grid;gap:0}
 .wv2-workflow-documents>header{padding-bottom:8px}
 .wv2-workflow-documents>header h3{margin:0}
