@@ -1,4 +1,4 @@
-import { and, asc, eq, inArray, sql } from "drizzle-orm";
+import { and, asc, eq, ilike, inArray, or, sql } from "drizzle-orm";
 import { getDb } from "../index";
 import { deliverables, projectsDb, wbsTasks } from "../schema";
 import { workflowSourceDrawingLinks } from "../workflow-drawing-schema";
@@ -8,6 +8,8 @@ export type WorkflowDrawingSourceType = "ECR" | "QUALITY";
 export type WorkflowDrawing = {
   id: string;
   projectId: string;
+  projectCode: string;
+  projectName: string;
   drawingCode: string | null;
   name: string;
   drawingType: string | null;
@@ -19,6 +21,8 @@ export type WorkflowDrawing = {
 const drawingSelect = {
   id: deliverables.id,
   projectId: deliverables.projectId,
+  projectCode: projectsDb.code,
+  projectName: projectsDb.name,
   drawingCode: deliverables.drawingCode,
   name: deliverables.name,
   drawingType: deliverables.drawingType,
@@ -27,7 +31,31 @@ const drawingSelect = {
   taskName: wbsTasks.name,
 };
 
-export async function findWorkflowDrawing(companyId: string, projectId: string, drawingId: string): Promise<WorkflowDrawing | null> {
+export async function searchWorkflowDrawings(companyId: string, query = "", limit = 80): Promise<WorkflowDrawing[]> {
+  const db = getDb();
+  const normalized = query.trim();
+  const conditions = [
+    eq(projectsDb.companyId, companyId),
+    sql`COALESCE(deliverables.document_kind, 'document') = 'drawing'`,
+  ];
+  if (normalized) {
+    conditions.push(or(
+      ilike(deliverables.drawingCode, `%${normalized}%`),
+      ilike(deliverables.name, `%${normalized}%`),
+      ilike(projectsDb.code, `%${normalized}%`),
+      ilike(projectsDb.name, `%${normalized}%`),
+    )!);
+  }
+  return db.select(drawingSelect)
+    .from(deliverables)
+    .innerJoin(projectsDb, eq(projectsDb.id, deliverables.projectId))
+    .leftJoin(wbsTasks, eq(wbsTasks.id, deliverables.taskId))
+    .where(and(...conditions))
+    .orderBy(asc(projectsDb.code), asc(deliverables.drawingCode), asc(deliverables.name))
+    .limit(Math.max(1, Math.min(200, limit)));
+}
+
+export async function findWorkflowDrawing(companyId: string, drawingId: string): Promise<WorkflowDrawing | null> {
   const db = getDb();
   const [drawing] = await db.select(drawingSelect)
     .from(deliverables)
@@ -35,7 +63,6 @@ export async function findWorkflowDrawing(companyId: string, projectId: string, 
     .leftJoin(wbsTasks, eq(wbsTasks.id, deliverables.taskId))
     .where(and(
       eq(projectsDb.companyId, companyId),
-      eq(deliverables.projectId, projectId),
       eq(deliverables.id, drawingId),
       sql`COALESCE(deliverables.document_kind, 'document') = 'drawing'`,
     ))
