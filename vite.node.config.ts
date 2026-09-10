@@ -2,7 +2,6 @@ import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import vinext from "vinext";
 import { defineConfig } from "vite";
-import { nodeRequestCompatibilityPlugin } from "./tools/node-request-compat.mjs";
 
 function loadDevVars() {
   const file = resolve(process.cwd(), ".dev.vars");
@@ -36,5 +35,5 @@ export default defineConfig({
   ssr: {
     external: ["pg", "pg-native"],
   },
-  plugins: [vinext(), nodeRequestCompatibilityPlugin()],
+  plugins: [vinext()],
 });
