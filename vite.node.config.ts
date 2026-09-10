@@ -1,6 +1,7 @@
 import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import vinext from "vinext";
+import {nodeSessionGatePlugin} from "./tools/node-session-gate.mjs";
 import { defineConfig } from "vite";
 
 function loadDevVars() {
@@ -35,5 +36,5 @@ export default defineConfig({
   ssr: {
     external: ["pg", "pg-native"],
   },
-  plugins: [vinext()],
+  plugins: [nodeSessionGatePlugin(), vinext()],
 });

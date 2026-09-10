@@ -29,7 +29,7 @@ export async function verifyAppSession(token:string|undefined,secret:string){
 
 export function sessionTokenFromCookie(cookieHeader:string|null){
   if(!cookieHeader)return undefined;
-  for(const part of cookieHeader.split(";")){const [name,...value]=part.trim().split("=");if(name===APP_SESSION_COOKIE)return decodeURIComponent(value.join("="))}
+  for(const part of cookieHeader.split(";")){const [name,...value]=part.trim().split("=");if(name===APP_SESSION_COOKIE){try{return decodeURIComponent(value.join("="))}catch{return undefined}}}
   return undefined;
 }
 
