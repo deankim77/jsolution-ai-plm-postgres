@@ -57,3 +57,73 @@
 
 @media(max-width:1280px){.wv2-gate-health{grid-template-columns:repeat(3,minmax(145px,1fr))}.wv2-issue-risk-histogram{overflow-x:auto;grid-template-columns:repeat(10,minmax(105px,1fr))}}
 @media(max-width:720px){.wv2-gate-matrix-table>header,.wv2-gate-matrix-table>.row{min-width:1040px}.wv2-gate-health{grid-template-columns:repeat(2,minmax(140px,1fr))}.wv2-gate-health-guide{justify-content:flex-start;text-align:left}.wv2-issue-risk-histogram{min-height:265px;grid-template-columns:repeat(10,minmax(98px,1fr))}.wv2-gate-customer-matrix>header{align-items:flex-start;flex-direction:column}}
+
+
+/* Project dashboard visual hierarchy aligned with the CS WIND dashboard. */
+.wv2-project-dashboard>header .wv2-module-title-row h1{
+  font-size:var(--v2-font-size-screen-title);
+  font-weight:700;
+}
+.wv2-project-dashboard .summary article{
+  min-height:88px;
+  padding:14px 16px;
+}
+.wv2-project-dashboard .summary span{
+  color:var(--v2-color-ink);
+  font-size:var(--v2-font-size-body);
+  font-weight:800;
+  line-height:1.35;
+}
+.wv2-project-dashboard .summary b{
+  font-size:var(--v2-font-size-title);
+  font-weight:900;
+  line-height:1.15;
+}
+.wv2-project-dashboard .summary article>small{
+  font-size:var(--v2-font-size-caption);
+}
+.wv2-project-dashboard .wv2-project-shortcuts{
+  gap:12px;
+  margin-block:16px;
+}
+.wv2-project-dashboard .wv2-project-shortcuts>button{
+  min-height:88px;
+  padding:16px;
+  gap:14px;
+  background:var(--v2-surface-content);
+  border-color:var(--v2-border-color);
+}
+.wv2-project-dashboard .wv2-project-shortcuts>button>svg{
+  width:28px;
+  height:28px;
+  color:var(--v2-color-primary);
+}
+.wv2-project-dashboard .wv2-project-shortcuts>button>span{gap:6px}
+.wv2-project-dashboard .wv2-project-shortcuts>button b,
+.wv2-project-dashboard .dashboard-action-grid>section>header>b{
+  color:var(--v2-color-ink);
+  font-size:var(--v2-font-size-panel-title);
+  font-weight:700;
+}
+.wv2-project-dashboard .wv2-project-shortcuts>button b{
+  white-space:normal;
+  line-height:var(--v2-line-height-body);
+}
+.wv2-project-dashboard .dashboard-action-grid>section>header{
+  min-height:48px;
+}
+.wv2-project-dashboard .dashboard-action-grid>section>header>span{
+  font-size:var(--v2-font-size-body);
+  font-weight:700;
+}
+.wv2-project-dashboard .dashboard-action-grid>section{
+  overflow:hidden;
+  border:1px solid var(--v2-border-color);
+  border-radius:var(--v2-radius-md);
+  background:var(--v2-surface-content);
+}
+@media(max-width:720px){
+  .wv2-project-dashboard .summary article{min-height:78px;padding:11px 12px}
+  .wv2-project-dashboard .summary span{font-size:var(--v2-font-size-control)}
+  .wv2-project-dashboard .dashboard-action-grid>section>header>span{font-size:var(--v2-font-size-caption)}
+}
