@@ -40,7 +40,7 @@ export async function writeBusinessBriefDocx(path,content){
     decisionBox(content.decision),
   ].join("");
   const document=`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><w:body>${body}<w:sectPr><w:headerReference w:type="default" r:id="rId2"/><w:footerReference w:type="default" r:id="rId3"/><w:pgSz w:w="12240" w:h="15840"/><w:pgMar w:top="1440" w:right="1440" w:bottom="1440" w:left="1440" w:header="708" w:footer="708" w:gutter="0"/></w:sectPr></w:body></w:document>`;
-  const header=`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:hdr xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">${paragraph("J SOLUTION AI PMS · 자동차 G6 Stage-Gate 데모",{size:18,color:"6B7280",after:0,line:220})}</w:hdr>`;
+  const header=`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:hdr xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">${paragraph(content.headerLabel||"J SOLUTION AI PMS · 자동차 G6 Stage-Gate 데모",{size:18,color:"6B7280",after:0,line:220})}</w:hdr>`;
   const footer=`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:ftr xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:p><w:pPr><w:jc w:val="right"/></w:pPr><w:r><w:rPr><w:rFonts w:ascii="Calibri" w:hAnsi="Calibri"/><w:sz w:val="18"/><w:color w:val="6B7280"/></w:rPr><w:t>Page </w:t></w:r><w:fldSimple w:instr="PAGE"><w:r><w:t>1</w:t></w:r></w:fldSimple></w:p></w:ftr>`;
   const now=new Date().toISOString();
   const core=`<?xml version="1.0" encoding="UTF-8" standalone="yes"?><cp:coreProperties xmlns:cp="http://schemas.openxmlformats.org/package/2006/metadata/core-properties" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:dcterms="http://purl.org/dc/terms/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"><dc:title>${xml(content.title)}</dc:title><dc:creator>J SOLUTION AI PMS Demo</dc:creator><cp:lastModifiedBy>J SOLUTION AI PMS Demo</cp:lastModifiedBy><dcterms:created xsi:type="dcterms:W3CDTF">${now}</dcterms:created><dcterms:modified xsi:type="dcterms:W3CDTF">${now}</dcterms:modified></cp:coreProperties>`;
@@ -48,4 +48,3 @@ export async function writeBusinessBriefDocx(path,content){
   const archive=zip([["[Content_Types].xml",types],["_rels/.rels",rootRels],["word/document.xml",document],["word/styles.xml",styles],["word/_rels/document.xml.rels",docRels],["word/header1.xml",header],["word/footer1.xml",footer],["docProps/core.xml",core],["docProps/app.xml",app]]);
   await mkdir(dirname(path),{recursive:true});await writeFile(path,archive);return {path,size:archive.length};
 }
-

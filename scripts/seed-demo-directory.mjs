@@ -25,7 +25,7 @@ const userPlan=[
   ["문지호","DEMO_BUY","avatar-03"],["장서윤","DEMO_BUY","avatar-04"],
   ["백승현","DEMO_QA","avatar-05"],["유나경","DEMO_QA","avatar-06"],["권민재","DEMO_QA","avatar-07"],
   ["홍채원","DEMO_DX","avatar-08"],
-].map(([name,organizationCode,avatarKey],index)=>({name,organizationCode,avatarKey,email:`demo.${String(index+1).padStart(2,"0")}@jjjsolution.com`}));
+].map(([name,organizationCode,avatarKey],index)=>({name,organizationCode,avatarKey,email:`demo.${String(index+1).padStart(2,"0")}@jsolution.io`}));
 const rolePlan=[
   ["PM","PM","프로젝트 관리",true,0],["PL","PL","프로젝트 관리",true,1],["PLAN","기획","업무 수행",false,10],
   ["DESIGN","설계","업무 수행",false,20],["DEV","개발","업무 수행",false,30],["PURCHASE","구매","업무 수행",false,40],

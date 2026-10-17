@@ -49,6 +49,7 @@
 
 /* Dashboard spacing only: preserve the existing layout and scroll behavior */
 .wv2-portfolio-dashboard>header{margin-bottom:12px}
+.wv2-dashboard-filters{display:flex;align-items:end;gap:12px;flex-wrap:wrap}
 .wv2-portfolio-dashboard>.wv2-gate-customer-matrix{margin-top:12px}
 .wv2-project-dashboard>header{margin-bottom:12px}
 .wv2-project-dashboard>.wv2-project-gate-panel{margin-top:12px}
