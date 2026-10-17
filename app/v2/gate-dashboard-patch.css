@@ -60,22 +60,9 @@
 
 
 /* CS WIND T800 dashboard typography and spacing. */
-.wv2-project-dashboard>header .wv2-dashboard-title-row h1{
-  color:var(--v2-color-ink);
+.wv2-project-dashboard>header .wv2-module-title-row h1{
   font-size:var(--v2-font-size-screen-title);
   font-weight:700;
-  line-height:1.2;
-}
-.wv2-project-dashboard .wv2-dashboard-title-row{
-  display:flex;
-  align-items:baseline;
-  flex-wrap:wrap;
-  gap:8px 20px;
-}
-.wv2-project-dashboard .wv2-dashboard-title-row p{
-  margin:0;
-  font-size:var(--v2-font-size-body);
-  line-height:var(--v2-line-height-body);
 }
 .wv2-project-dashboard>.summary{
   display:grid;
@@ -200,5 +187,4 @@
   .wv2-project-dashboard .summary article{min-height:72px;padding:11px 12px}
   .wv2-project-dashboard .summary b{font-size:var(--v2-font-size-body)}
   .wv2-project-dashboard .dashboard-action-grid>section>header>span{font-size:var(--v2-font-size-caption)}
-  .wv2-project-dashboard .wv2-dashboard-title-row{align-items:flex-start;flex-direction:column;gap:4px}
 }
