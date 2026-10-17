@@ -1,5 +1,6 @@
 "use client";
 
+import {FeatureSettingsProvider} from "./v2/feature-settings";
 import NewWorkViewApp from "./v2/NewWorkViewApp";
 import {AdminProjectDeleteControl} from "./v2/admin-project-delete-control";
 import {ProductDataBridge} from "./v2/product-data-bridge";
@@ -8,5 +9,5 @@ import "./v2/document-preview-fix.css";
 import "./v2/right-panel-defaults.css";
 
 export default function Home(){
-  return <><NewWorkViewApp/><AdminProjectDeleteControl/><ProductDataBridge/><PinnedTabsSettings/></>;
+  return <FeatureSettingsProvider><NewWorkViewApp/><AdminProjectDeleteControl/><ProductDataBridge/><PinnedTabsSettings/></FeatureSettingsProvider>;
 }

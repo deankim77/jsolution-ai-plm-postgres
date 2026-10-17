@@ -2,12 +2,14 @@
 
 import "./document-list-wbs-link.css";
 import {Suspense,lazy,useEffect,useState,type ComponentType} from "react";
+import {useFeatureSettings} from "./feature-settings";
 import DocumentManagementPanel from "./document-management-panel";
 
 const LibraryWorkspace=lazy(()=>import("./document-library-workspace"));
 type LibraryMode="document"|"drawing";
 
 function DocumentWorkspace(props:any){
+  const {features}=useFeatureSettings();
   const [libraryMode,setLibraryMode]=useState<LibraryMode>("document");
   const [detailId,setDetailId]=useState("");
   const [refreshVersion,setRefreshVersion]=useState(0);
@@ -18,8 +20,10 @@ function DocumentWorkspace(props:any){
     return()=>window.removeEventListener("v2-deliverables-updated",refresh);
   },[]);
 
+  useEffect(()=>{if(!features.drawings){setLibraryMode("document");setDetailId("");}},[features.drawings]);
+
   return <>
-    <Suspense fallback={null}><LibraryWorkspace {...props} refreshVersion={refreshVersion} libraryMode={libraryMode} onLibraryModeChange={setLibraryMode} onOpenDetail={setDetailId}/></Suspense>
+    <Suspense fallback={null}><LibraryWorkspace {...props} refreshVersion={refreshVersion} libraryMode={features.drawings?libraryMode:"document"} onLibraryModeChange={setLibraryMode} onOpenDetail={setDetailId}/></Suspense>
     {detailId&&<DocumentManagementPanel deliverableId={detailId} onClose={()=>setDetailId("")} onOpenTask={(projectId,taskId)=>{setDetailId("");props.onOpenTask?.(projectId,taskId)}}/>}
   </>;
 }

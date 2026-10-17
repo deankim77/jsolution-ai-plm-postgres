@@ -5,6 +5,7 @@ import {FileImage,FileSpreadsheet,FileText,FileType2,Filter,Plus,RefreshCw,Uploa
 import type {V2Project} from "./project-workspaces";
 import {useAiContextSelection} from "./ai-context-selection";
 import {CommonProjectSelector} from "./common-project-selector";
+import {useFeatureSettings} from "./feature-settings";
 import {drawingTypeLabel} from "./drawing-type-label";
 import {FilterChipGroup,FilterSection,FilterSelect,type WorkspaceFilterConfig} from "./workspace-filter-panel";
 import type {DocumentPreviewDeliverable,DocumentPreviewTab,DocumentPreviewVersion} from "./document-preview-renderer";
@@ -59,6 +60,7 @@ const categoryLabel=(value?:string)=>{const text=(value||"").trim();if(!text)ret
 const formatCreatedAt=(value?:number)=>{if(!value)return "작성일 미상";const date=new Date(value>1_000_000_000_000?value:value*1000);if(Number.isNaN(date.getTime()))return "작성일 미상";const pad=(n:number)=>String(n).padStart(2,"0");return `${date.getFullYear()}-${pad(date.getMonth()+1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}`};
 
 export default function DocumentLibraryWorkspace({project,projects,tasks,initialDeliverableId,onInitialOpened,onOpenTask,onAddDeliverable,onOpenFilter,libraryMode="document",onLibraryModeChange,onOpenDetail,refreshVersion=0}:Props){
+  const {features}=useFeatureSettings();
   const selection=useAiContextSelection("문서 · 산출물");
   const [items,setItems]=useState<Deliverable[]>([]);
   const [versions,setVersions]=useState<DeliverableVersion[]>([]);
@@ -252,12 +254,12 @@ export default function DocumentLibraryWorkspace({project,projects,tasks,initial
   return <section className="wv2-module wv2-document-workspace">
     <header className="wv2-module-head">
       <div className="wv2-module-head-main"><small>DOCUMENT · DELIVERABLE · PREVIEW</small><div className="wv2-module-title-row"><h1>문서 · 산출물</h1><p>시스템에 실제 등록된 문서를 빠르게 찾고 확인합니다.</p></div></div>
-      <div className="wv2-module-head-actions"><button disabled={!registrationProject} onClick={()=>void openRegistration("drawing")}><FileText size={18}/>도면 등록</button><button className="primary" disabled={!registrationProject} onClick={()=>void openRegistration("deliverable")}><Upload size={18}/>추가 산출물 등록</button></div>
+      <div className="wv2-module-head-actions">{features.drawings&&<button disabled={!registrationProject} onClick={()=>void openRegistration("drawing")}><FileText size={18}/>도면 등록</button>}<button className="primary" disabled={!registrationProject} onClick={()=>void openRegistration("deliverable")}><Upload size={18}/>추가 산출물 등록</button></div>
     </header>
 
     <nav className="wv2-preview-tabs">
       <button className={activeTab==="library"&&libraryMode==="document"?"active":""} onClick={()=>{setActiveTab("library");onLibraryModeChange?.("document")}}><FileText size={18}/>문서 라이브러리</button>
-      <button className={activeTab==="library"&&libraryMode==="drawing"?"active":""} onClick={()=>{setActiveTab("library");onLibraryModeChange?.("drawing")}}><FileText size={18}/>도면 라이브러리</button>
+      {features.drawings&&<button className={activeTab==="library"&&libraryMode==="drawing"?"active":""} onClick={()=>{setActiveTab("library");onLibraryModeChange?.("drawing")}}><FileText size={18}/>도면 라이브러리</button>}
       {tabs.map(tab=><button key={tab.id} className={activeTab===tab.id?"active":""} onClick={()=>setActiveTab(tab.id)}><span>{tab.title}</span><X size={18} onClick={event=>{event.stopPropagation();closeTab(tab.id)}}/></button>)}
       <button className="add" onClick={()=>setActiveTab("library")}><Plus size={18}/></button>
     </nav>

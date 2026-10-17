@@ -1,6 +1,8 @@
 "use client";
 
 import {useEffect,useRef,useState} from "react";
+import {useFeatureSettings} from "./feature-settings";
+import {workspaceEnabled} from "../../lib/feature-settings";
 import {Pin,X} from "lucide-react";
 import "./pinned-tabs-settings.css";
 
@@ -50,6 +52,7 @@ async function savePinnedTabs(value:PinnedView[]){
 }
 
 export function PinnedTabsSettings(){
+  const {features}=useFeatureSettings();
   const [pinned,setPinned]=useState<PinnedView[]>([FIXED_PINNED_VIEW]);
   const [draft,setDraft]=useState<PinnedView[]>([FIXED_PINNED_VIEW]);
   const [open,setOpen]=useState(false);
@@ -107,7 +110,7 @@ export function PinnedTabsSettings(){
   return <div ref={popoverRef} className="wv2-pinned-tabs-popover" role="dialog" aria-label="고정 탭 설정">
     <header>
       <div><b>고정 탭 설정</b><small>MY WORK는 항상 1번에 고정되며, 2개를 추가할 수 있습니다.</small></div>
-      <button aria-label="닫기" onClick={()=>setOpen(false)}><X size={17}/></button>
+      <button aria-label="닫기" onClick={()=>setOpen(false)}><X size={18}/></button>
     </header>
     <section>
       <div className="wv2-pinned-tabs-title"><label>고정 탭</label><span>{draft.length}/3</span></div>
@@ -115,12 +118,12 @@ export function PinnedTabsSettings(){
         <button className="selected" disabled>
           <span className="order">1</span>MY WORK
         </button>
-        {additionalItems.map(item=>{
+        {additionalItems.filter(item=>workspaceEnabled(item.view,features)).map(item=>{
           const order=draft.indexOf(item.view);
           const selected=order>=0;
           const disabled=!selected&&draft.length>=3;
           return <button key={item.view} className={selected?"selected":""} disabled={disabled} onClick={()=>toggle(item.view)}>
-            <span className={selected?"order":""}>{selected?order+1:<Pin size={15}/>}</span>{item.label}
+            <span className={selected?"order":""}>{selected?order+1:<Pin size={18}/>}</span>{item.label}
           </button>;
         })}
       </div>

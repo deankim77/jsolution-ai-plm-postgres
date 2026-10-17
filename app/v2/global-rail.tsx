@@ -14,6 +14,7 @@ import {
   Sparkles,
   type LucideIcon,
 } from "lucide-react";
+import {useFeatureSettings} from "./feature-settings";
 import ProjectPlmTabsBridge from "./project-plm-tabs-bridge";
 import DocumentPreviewOverlayBridge from "./document-preview-overlay";
 import BomCentralTabBridge from "./bom-central-tab-bridge";
@@ -56,11 +57,12 @@ const personalNav:RailItem[]=[
 const iconStyle={width:"var(--v2-icon-size-primary)",height:"var(--v2-icon-size-primary)"};
 
 export default function GlobalRail({onSearch,onView,active}:{onSearch:()=>void;onView:(view:RailWorkspaceView)=>void;active:string}){
+  const {features}=useFeatureSettings();
   const [mounted,setMounted]=useState(false);useEffect(()=>setMounted(true),[]);
   const renderItem=(item:RailItem)=>{
     const Icon=item.icon;
     const action=item.label==="통합검색"?onSearch:item.action;
     return <button key={item.label} className={item.view&&active===item.view?"active":""} onClick={action||(()=>item.view&&onView(item.view))} title={item.label}><Icon style={iconStyle}/><span>{item.label}</span></button>;
   };
-  return <><aside className="wv2-rail"><button className="wv2-brand">J</button>{primaryNav.map(renderItem)}<div className="wv2-rail-spacer"/>{personalNav.map(renderItem)}</aside>{mounted&&<><ProjectPlmTabsBridge/><DocumentPreviewOverlayBridge/><BomCentralTabBridge/><BomEditorCommandBridge/></>}</>;
+  return <><aside className="wv2-rail"><button className="wv2-brand">J</button>{primaryNav.map(renderItem)}<div className="wv2-rail-spacer"/>{personalNav.map(renderItem)}</aside>{mounted&&<><ProjectPlmTabsBridge/><DocumentPreviewOverlayBridge/><BomCentralTabBridge/>{features.partBom&&<BomEditorCommandBridge/>}</>}</>;
 }

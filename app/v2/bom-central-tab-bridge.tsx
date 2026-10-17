@@ -1,8 +1,9 @@
 "use client";
 
-import {useEffect,useState} from "react";
+import {useEffect,useRef,useState} from "react";
 import {createPortal} from "react-dom";
 import {Layers3,X} from "lucide-react";
+import {useFeatureSettings} from "./feature-settings";
 import {PartBomWorkspace} from "./part-bom-workspace";
 import "./bom-central-tab-bridge.css";
 
@@ -22,6 +23,8 @@ function ensureTabHost(parent:HTMLElement){
 }
 
 export default function BomCentralTabBridge(){
+  const {features}=useFeatureSettings();
+  const enabled=useRef(features.partBom);enabled.current=features.partBom;
   const [tabHost,setTabHost]=useState<HTMLElement|null>(null);
   const [contentHost,setContentHost]=useState<HTMLElement|null>(null);
   const [tabs,setTabs]=useState<BomTab[]>([]);
@@ -54,6 +57,8 @@ export default function BomCentralTabBridge(){
     setActiveId("");
   };
 
+  useEffect(()=>{if(!features.partBom){deactivateBom();setTabs([]);setParts([]);}},[features.partBom]);
+
   const loadParts=async(force=false)=>{
     if(parts.length&&!force)return parts;
     try{
@@ -65,7 +70,7 @@ export default function BomCentralTabBridge(){
     }catch{return [] as Part[]}
   };
 
-  const openPartRecord=(part:Part)=>{
+  const openPartRecord=(part:Part)=>{if(!enabled.current)return;
     const nav=document.querySelector<HTMLElement>(".wv2-work-tabs");
     if(nav&&!tabHost)setTabHost(ensureTabHost(nav));
     setTabs(current=>current.some(tab=>tab.partId===part.id)?current:[...current,{partId:part.id,partNumber:part.partNumber,name:part.name}]);
@@ -92,7 +97,7 @@ export default function BomCentralTabBridge(){
   };
 
   useEffect(()=>{
-    const openRequested=(event:Event)=>{const partId=(event as CustomEvent<{partId?:string}>).detail?.partId;if(partId)void openPartId(partId)};
+    const openRequested=(event:Event)=>{if(!enabled.current)return;const partId=(event as CustomEvent<{partId?:string}>).detail?.partId;if(partId)void openPartId(partId)};
     window.addEventListener("v2-open-part-bom",openRequested);
     return()=>window.removeEventListener("v2-open-part-bom",openRequested);
   },[parts,tabHost]);
@@ -119,7 +124,7 @@ export default function BomCentralTabBridge(){
   useEffect(()=>{
     const handler=(event:MouseEvent)=>{
       const target=event.target as HTMLElement|null;
-      if(!target)return;
+      if(!target||!enabled.current)return;
       const libraryButton=target.closest(".pbw-bom-cell button");
       if(libraryButton&&!target.closest(".bom-central-content-host")){
         const row=libraryButton.closest(".pbw-part-table > article");
@@ -143,9 +148,9 @@ export default function BomCentralTabBridge(){
   useEffect(()=>{
     const nav=document.querySelector<HTMLElement>(".wv2-work-tabs");
     const content=document.querySelector<HTMLElement>(".wv2-content");
-    nav?.classList.toggle("bom-central-active",Boolean(activeId));
+    nav?.classList.toggle("bom-central-active",Boolean(activeId)&&features.partBom);
     content?.classList.toggle("bom-central-active",Boolean(activeId));
-  },[activeId]);
+  },[activeId,features.partBom]);
 
   const closeTab=(partId:string)=>{
     const index=tabs.findIndex(tab=>tab.partId===partId);
@@ -158,7 +163,7 @@ export default function BomCentralTabBridge(){
     if(!remaining.length){tabHost?.remove();setTabHost(null)}
   };
 
-  if(!contentHost)return null;
+  if(!contentHost||!features.partBom)return null;
   const activeTab=tabs.find(tab=>tab.partId===activeId);
   return <>
     {tabHost&&createPortal(<>{tabs.map(tab=><button key={tab.partId} type="button" className={`bom-central-work-tab ${activeId===tab.partId?"active":""}`} title={`${tab.partNumber} · ${tab.name}`} onClick={()=>activateBom(tab.partId)}><Layers3 size={18}/><span>BOM · {tab.partNumber}</span><i role="button" aria-label={`${tab.partNumber} BOM 탭 닫기`} onClick={event=>{event.stopPropagation();closeTab(tab.partId)}}><X size={18}/></i></button>)}</>,tabHost)}

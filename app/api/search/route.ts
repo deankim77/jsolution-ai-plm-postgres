@@ -1,3 +1,4 @@
+import {loadFeatureSettings} from "../../../services/feature-settings-service";
 import { getLegacyDbCompat } from "../../../db/postgres-d1-compat";
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import {ensureProjectDataFoundation,type RuntimeD1} from "../../../db/project-data-foundation";
@@ -86,7 +87,7 @@ async function searchDocument(args:SearchArgs):Promise<SearchGroup>{
   const filters=["p.company_id=?",textMatch(text)],binds:any[]=[context.companyId,...textBinds(args)];
   if(mine){filters.push("(d.owner_user_id=? OR d.created_by=? OR w.assignee_user_id=?)");binds.push(context.userId,context.userId,context.userId)}
   if(status==="unregistered")filters.push("(d.status='planned' OR NOT EXISTS(SELECT 1 FROM deliverable_versions vx WHERE vx.deliverable_id=d.id AND vx.deleted_at IS NULL))");else if(status==="approval_pending")filters.push("d.status IN ('submitted','review')");else if(status==="rejected")filters.push("d.status='rejected'");else if(status==="completed")filters.push("d.status IN ('approved','completed')");else if(status==="unprocessed")filters.push("d.status NOT IN ('approved','completed')");
-  const rows=await db.prepare(`SELECT d.id,'document' AS kind,p.id AS projectId,d.task_id AS taskId,COALESCE(d.drawing_code,d.category,'문서·산출물') AS eyebrow,d.name AS title,p.name||' · '||COALESCE(w.wbs_code||' '||w.name,'프로젝트 공통')||' · '||CASE WHEN EXISTS(SELECT 1 FROM deliverable_versions lv WHERE lv.deliverable_id=d.id AND lv.deleted_at IS NULL) THEN '등록 완료' ELSE '미등록' END AS meta FROM deliverables d JOIN projects p ON p.id=d.project_id LEFT JOIN wbs_tasks w ON w.id=d.task_id WHERE ${filters.join(" AND ")} ORDER BY d.updated_at DESC LIMIT 35`).bind(...binds).all();
+  const rows=await db.prepare(`SELECT d.id,d.document_kind AS documentKind,'document' AS kind,p.id AS projectId,d.task_id AS taskId,COALESCE(d.drawing_code,d.category,'문서·산출물') AS eyebrow,d.name AS title,p.name||' · '||COALESCE(w.wbs_code||' '||w.name,'프로젝트 공통')||' · '||CASE WHEN EXISTS(SELECT 1 FROM deliverable_versions lv WHERE lv.deliverable_id=d.id AND lv.deleted_at IS NULL) THEN '등록 완료' ELSE '미등록' END AS meta FROM deliverables d JOIN projects p ON p.id=d.project_id LEFT JOIN wbs_tasks w ON w.id=d.task_id WHERE ${filters.join(" AND ")} ORDER BY d.updated_at DESC LIMIT 35`).bind(...binds).all();
   return {kind:"document",items:rows.results||[],reason:mine?"내 담당·등록 문서":status==="unregistered"?"Revision 파일이 없는 문서·산출물":undefined};
 }
 
@@ -147,12 +148,13 @@ export async function GET(request:Request){
   const url=new URL(request.url),query=(url.searchParams.get("q")||"").trim(),scope=url.searchParams.get("scope")||"all";
   if(!query)return Response.json({results:[],intent:"general",intentLabel:"통합 검색"});
 
+  const features=await loadFeatureSettings(context);
   const target=detectTarget(query),status=detectStatus(query),severity=detectSeverity(query),mine=detectMine(query),actionRequired=detectActionRequired(query),top=detectTop(query),subtype=issueSubtype(query),term=cleanTerm(query);
   const args:SearchArgs={db,context:{companyId:context.companyId,userId:context.userId},like:term?`%${term.toLowerCase()}%`:"%",compactLike:term?`%${compact(term)}%`:"%",today:new Date().toISOString().slice(0,10),status,severity,mine,actionRequired,top,subtype};
-  const kinds=(Object.keys(searchers) as SearchKind[]).filter(kind=>scope===kind||(scope==="all"&&(!target||target===kind)));
+  const kinds=(Object.keys(searchers) as SearchKind[]).filter(kind=>(kind!=="ecr"||features.designChange)&&(kind!=="quality"||features.quality)).filter(kind=>scope===kind||(scope==="all"&&(!target||target===kind)));
   const groups=await Promise.all(kinds.map(kind=>searchers[kind](args)));
   const results:any[]=[];
-  for(const group of groups)for(const item of group.items){if(results.some(existing=>existing.kind===item.kind&&existing.id===item.id))continue;results.push(group.reason?{...item,intentReason:group.reason}:item)}
+  for(const group of groups)for(const item of group.items){if(!features.drawings&&item.documentKind==="drawing")continue;if(results.some(existing=>existing.kind===item.kind&&existing.id===item.id))continue;results.push(group.reason?{...item,intentReason:group.reason}:item)}
   results.sort((a,b)=>(priority[a.kind as SearchKind]??9)-(priority[b.kind as SearchKind]??9));
   return Response.json({results:results.slice(0,120),intent:target||"general",intentLabel:labelFor(target,status,mine),term,status,target,severity,mine,actionRequired,top});
 }
