@@ -1,5 +1,6 @@
 "use client";
 
+import {TableHeaderFilter} from "./table-header-filter";
 import {lazy,Suspense,useEffect,useRef,useState} from "react";
 import {FileImage,FileSpreadsheet,FileText,FileType2,Filter,Plus,RefreshCw,Upload,X} from "lucide-react";
 import type {V2Project} from "./project-workspaces";
@@ -279,7 +280,7 @@ export default function DocumentLibraryWorkspace({project,projects,tasks,initial
         </div>
         {loading&&!items.length?<div className="wv2-preview-empty"><RefreshCw className="wv2-spin" size={25}/><b>등록 문서를 불러오는 중…</b></div>
         :<div className="wv2-document-table wv2-preview-document-table">
-          <header><span className="select"><input type="checkbox" checked={Boolean(visibleItems.length)&&visibleItems.every(item=>selection.has(contextFor(item)))} onChange={()=>visibleItems.every(item=>selection.has(contextFor(item)))?selection.clear():visibleItems.forEach(item=>{if(!selection.has(contextFor(item)))selection.toggle(contextFor(item))})}/></span><span>산출물</span><span>프로젝트 · WBS</span><span>작성자 · 작성일</span><span>Revision</span><span>상태</span><span/></header>
+          <header><span className="select"><input type="checkbox" checked={Boolean(visibleItems.length)&&visibleItems.every(item=>selection.has(contextFor(item)))} onChange={()=>visibleItems.every(item=>selection.has(contextFor(item)))?selection.clear():visibleItems.forEach(item=>{if(!selection.has(contextFor(item)))selection.toggle(contextFor(item))})}/></span><span><TableHeaderFilter label="산출물 · 카테고리" value={filters.category} onChange={value=>setFilters(current=>({...current,category:value}))} options={categories.map(value=>({value,label:value}))}/></span><span><TableHeaderFilter label="프로젝트 · WBS" value={projectFilter} onChange={setProjectFilter} options={projects.map(item=>({value:item.id,label:item.name}))}/></span><span>작성자 · 작성일</span><span>Revision</span><span><TableHeaderFilter label="검토 상태" value={filters.review} onChange={value=>setFilters(current=>({...current,review:value}))} options={[{"value":"pending","label":"미승인"},{"value":"approved","label":"승인"},{"value":"rejected","label":"반려"}]}/></span><span/></header>
           {visibleItems.map(item=>{const latest=latestFor(item.id),Icon=latest?iconFor(latest.fileName):FileText,drawing=isDrawing(item);return <article key={item.id} onClick={()=>onOpenDetail?.(item.id)}>
             <span className="select"><input type="checkbox" checked={selection.has(contextFor(item))} onClick={event=>event.stopPropagation()} onChange={()=>selection.toggle(contextFor(item))}/></span>
             <button className="name"><Icon size={18}/><span><b>{item.name}</b><small>{drawing?`${item.drawingCode||"도면코드"} · ${drawingTypeLabel(item.drawingType)}`:categoryLabel(item.type)}</small></span></button>

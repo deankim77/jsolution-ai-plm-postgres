@@ -1,0 +1,3 @@
+.wv2-table-header-filter{display:flex;flex-wrap:wrap;align-items:center;gap:4px;min-width:0;max-width:100%;font-size:var(--v2-font-size-table-header)}
+.wv2-table-header-filter>span{white-space:nowrap}
+.wv2-table-header-filter>select{min-width:0;width:auto;max-width:100%;height:30px;padding:2px 4px;font-size:var(--v2-font-size-body);color:inherit;background:var(--v2-surface-content);border:1px solid var(--v2-border-color);border-radius:4px}
