@@ -105,7 +105,7 @@
 .wv2-project-dashboard .wv2-production-summary>.wv2-production-overall>span:first-child,
 .wv2-project-dashboard .wv2-production-summary>article>span:first-child{
   color:var(--v2-color-ink);
-  font-size:var(--v2-font-size-panel-title);
+  font-size:var(--v2-font-size-screen-title);
   font-weight:700;
 }
 .wv2-project-dashboard .wv2-production-summary>.wv2-production-overall strong{
