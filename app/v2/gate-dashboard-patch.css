@@ -151,3 +151,18 @@
   font-size:var(--v2-font-size-card-title);
   font-weight:900;
 }
+
+/* Keep dashboard metrics readable even when the base workspace stylesheet loads later. */
+.wv2-project-dashboard>.summary>article>span{
+  color:var(--v2-color-ink);
+  font-size:var(--v2-font-size-body);
+  font-weight:800;
+}
+.wv2-project-dashboard>.summary>article>b{
+  font-size:var(--v2-font-size-title);
+  font-weight:900;
+}
+.wv2-project-dashboard>.wv2-production-summary>.wv2-production-overall>small{
+  color:var(--muted);
+  font-size:var(--v2-font-size-caption);
+}
