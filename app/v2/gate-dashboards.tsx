@@ -27,7 +27,7 @@ const delayedTask=(task:Task)=>task.status!=="completed"&&Boolean(task.plannedEn
 
 function GateFlow({gates,onOpen}:{gates:Gate[];onOpen?:(taskId:string)=>void}){
   const items=["G1","G2","G3","G4","G5","G6"].map(code=>gates.find(item=>item.gateCode===code)||{taskId:code,gateCode:code,name:code+" Gate",status:"planned",progress:0,decision:null,activityCount:0,completedActivityCount:0,missingRequiredDeliverables:0,openGateIssues:0});
-  return <div className="wv2-gate-flow">{items.map((gate,index)=><div className="wv2-gate-node-wrap" key={gate.gateCode}><button className={decisionClass(gate.decision||gate.status)} onClick={()=>onOpen?.(gate.taskId)} disabled={!onOpen}><b>{gate.gateCode}</b><span>{decisionLabel(gate.decision||gate.status)}</span><small>{gate.completedActivityCount}/{gate.activityCount} 활동 · 산출물 미흡 {gate.missingRequiredDeliverables}</small></button>{index<items.length-1&&<i/>}</div>)}</div>;
+  return <div className="wv2-gate-flow wv2-dashboard-gate-flow">{items.map(gate=><div className="wv2-gate-node-wrap" key={gate.gateCode}><button className={decisionClass(gate.decision||gate.status)} onClick={()=>onOpen?.(gate.taskId)} disabled={!onOpen}><b>{gate.gateCode}</b><span className="wv2-gate-detail-status">{decisionLabel(gate.decision||gate.status)}</span><small>진행 : {gate.progress}%</small><small>지연율 : {gate.delayRate===undefined?"—":gate.delayRate+"%"}</small><small>활동 완료 : {gate.completedActivityCount}/{gate.activityCount}</small><small>산출물 미등록 : {gate.missingRequiredDeliverables}</small></button></div>)}</div>;
 }
 
 export function GatePortfolioDashboard({projects,onOpenProject,onOpenProjectList}:{projects:Project[];onOpenProject:(project:Project)=>void;onOpenProjectList:(preset:PortfolioProjectPreset)=>void}){
