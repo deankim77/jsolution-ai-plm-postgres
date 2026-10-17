@@ -27,19 +27,19 @@
 .wv2-gate-health-guide>b{color:var(--ink)}
 
 .wv2-issue-risk-chart-section{grid-column:1/-1;overflow:hidden}
-.wv2-issue-risk-histogram{display:grid;grid-template-columns:repeat(10,minmax(0,1fr));align-items:end;gap:10px;min-height:282px;padding:18px 12px 10px;overflow:hidden}
-.wv2-issue-risk-histogram-item{min-width:0;border:0;background:transparent;padding:0 3px;display:grid;grid-template-rows:24px 190px 34px;gap:5px;align-items:end;text-align:center;cursor:pointer}
-.wv2-issue-risk-histogram-item::before{content:"총 " attr(data-total);align-self:center;justify-self:center;border-radius:999px;background:#eef3f5;padding:3px 8px;color:var(--ink);font-size:var(--v2-font-size-body);font-weight:900;line-height:1.2}
+.wv2-issue-risk-histogram{display:grid;grid-template-columns:repeat(10,minmax(0,1fr));align-items:end;gap:10px;min-height:210px;padding:12px 12px 8px;overflow:hidden}
+.wv2-issue-risk-histogram-item{min-width:0;border:0;background:transparent;padding:0 3px;display:grid;grid-template-rows:20px 150px 24px;gap:5px;align-items:end;text-align:center;cursor:pointer}
+.wv2-issue-risk-histogram-item::before{content:"총 " attr(data-total);align-self:center;justify-self:center;color:var(--muted);font-size:var(--v2-font-size-caption);font-weight:500;line-height:1.2}
 .wv2-issue-risk-histogram-item:hover{background:var(--surface-soft);border-radius:8px}
-.wv2-issue-risk-bar-group{height:190px;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:4px;align-items:end;border-bottom:1px solid var(--line);padding:0 2px}
+.wv2-issue-risk-bar-group{height:150px;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:4px;align-items:end;border-bottom:1px solid var(--line);padding:0 2px}
 .wv2-issue-risk-bar{height:100%;display:grid;grid-template-rows:20px minmax(0,1fr) 18px;align-items:end;gap:3px}
-.wv2-issue-risk-bar>strong{align-self:end;font-size:var(--v2-font-size-caption);color:var(--ink)}
-.wv2-issue-risk-bar>i{justify-self:center;width:86%;height:145px;display:flex;align-items:flex-end;justify-content:center;overflow:hidden;border-radius:4px 4px 0 0;background:#f4f6f7}
-.wv2-issue-risk-bar>i>span{display:block;width:100%;min-height:0;border-radius:4px 4px 0 0;background:var(--teal)}
+.wv2-issue-risk-bar>strong{align-self:end;font-size:var(--v2-font-size-caption);color:var(--muted);font-weight:400}
+.wv2-issue-risk-bar>i{justify-self:center;width:min(14px,65%);height:100px;display:flex;align-items:flex-end;justify-content:center;overflow:hidden;border-radius:4px 4px 0 0;background:#f4f6f7}
+.wv2-issue-risk-bar>i>span{display:block;width:100%;min-height:0;border-radius:4px 4px 0 0;background:var(--teal);opacity:.6}
 .wv2-issue-risk-bar.risk>i>span{background:#d97706}
 .wv2-issue-risk-bar.collaboration>i>span{background:#4f7db8}
-.wv2-issue-risk-bar>small{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:var(--v2-font-size-body);color:var(--muted);font-weight:700}
-.wv2-issue-risk-histogram-item>b{align-self:start;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:var(--v2-font-size-body);font-weight:700}
+.wv2-issue-risk-bar>small{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:var(--v2-font-size-caption);color:var(--muted);font-weight:400}
+.wv2-issue-risk-histogram-item>b{align-self:start;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:var(--v2-font-size-caption);color:var(--muted);font-weight:400}
 
 /* Portfolio dashboard customer Gate matrix: match the card system used above */
 .wv2-gate-customer-matrix{overflow:hidden;border:1px solid var(--line);border-radius:var(--v2-radius-md);background:#fff}
@@ -54,7 +54,7 @@
 .wv2-project-dashboard>.wv2-project-gate-panel{margin-top:12px}
 
 @media(max-width:1280px){.wv2-gate-health{grid-template-columns:repeat(3,minmax(145px,1fr))}.wv2-issue-risk-histogram{overflow-x:auto;grid-template-columns:repeat(10,minmax(105px,1fr))}}
-@media(max-width:720px){.wv2-gate-matrix-table>header,.wv2-gate-matrix-table>.row{min-width:1040px}.wv2-gate-health{grid-template-columns:repeat(2,minmax(140px,1fr))}.wv2-gate-health-guide{justify-content:flex-start;text-align:left}.wv2-issue-risk-histogram{min-height:265px;grid-template-columns:repeat(10,minmax(98px,1fr))}.wv2-gate-customer-matrix>header{align-items:flex-start;flex-direction:column}}
+@media(max-width:720px){.wv2-gate-matrix-table>header,.wv2-gate-matrix-table>.row{min-width:1040px}.wv2-gate-health{grid-template-columns:repeat(2,minmax(140px,1fr))}.wv2-gate-health-guide{justify-content:flex-start;text-align:left}.wv2-issue-risk-histogram{min-height:210px;grid-template-columns:repeat(10,minmax(98px,1fr))}.wv2-gate-customer-matrix>header{align-items:flex-start;flex-direction:column}}
 
 
 /* CS WIND T800 dashboard typography and spacing. */
