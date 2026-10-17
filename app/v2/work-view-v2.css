@@ -3002,3 +3002,11 @@
 .wv2-issue-table .wv2-issue-wbs>b,.wv2-issue-table .wv2-issue-wbs>small{display:block;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .wv2-issue-table .wv2-issue-wbs>b{font-size:var(--v2-font-size-body)}
 .wv2-issue-table .wv2-issue-wbs>small{color:var(--muted);font-size:var(--v2-font-size-caption)}
+
+
+/* Keep module headings and their helper copy on one compact second line. */
+.wv2-module-head-main{flex:1;min-width:0}
+.wv2-module-title-row{display:flex;align-items:baseline;gap:12px;min-width:0}
+.wv2-module-title-row h1{flex:0 0 auto}
+.wv2-module-title-row p{min-width:0;margin:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+@media(max-width:900px){.wv2-module-title-row{gap:8px}.wv2-module-title-row p{font-size:var(--v2-font-size-caption)}}
