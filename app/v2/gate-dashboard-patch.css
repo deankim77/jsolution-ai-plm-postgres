@@ -127,3 +127,27 @@
   .wv2-project-dashboard .summary span{font-size:var(--v2-font-size-control)}
   .wv2-project-dashboard .dashboard-action-grid>section>header>span{font-size:var(--v2-font-size-caption)}
 }
+
+
+/* T800 production summary cards retain the P1-P6 values and emphasize the active stage. */
+.wv2-project-dashboard .wv2-production-summary{align-items:stretch}
+.wv2-project-dashboard .wv2-production-summary>.wv2-production-overall{
+  justify-content:space-between;
+  gap:7px;
+  border-color:#b8d9d6;
+  background:#f4fbfa;
+}
+.wv2-project-dashboard .wv2-production-summary>.wv2-production-overall>b{
+  color:var(--v2-color-primary);
+  font-size:var(--v2-font-size-title);
+  font-weight:900;
+}
+.wv2-project-dashboard .wv2-production-summary>article.active{
+  border-color:#85c4ba;
+  background:#eff9f7;
+}
+.wv2-project-dashboard .wv2-production-summary>article.active>b{
+  color:var(--v2-color-primary);
+  font-size:var(--v2-font-size-card-title);
+  font-weight:900;
+}
