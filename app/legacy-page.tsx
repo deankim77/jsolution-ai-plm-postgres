@@ -1043,7 +1043,7 @@ function LegacyHome() {
         <div className="brand">
           <div className="brand-mark">J</div>
           <div>
-<strong>J SOLUTION</strong>
+<strong>JSOLUTION</strong>
 <span>AI PMS</span>
 </div>
           <button className="sidebar-toggle" onClick={toggleSidebar} aria-label={sidebarCollapsed ? "사이드바 펼치기" : "사이드바 접기"} title={sidebarCollapsed ? "사이드바 펼치기" : "사이드바 접기"}>
@@ -1169,7 +1169,7 @@ function LegacyHome() {
               {activeConversationId ? <>
                 <header>{(()=>{const chat=conversations.find(item=>item.id===activeConversationId);return <><div><span>MY AI 대화</span><h2>{chat?.title??"대화"}</h2><p>{chat?.source} · {chat?.context}</p></div><div className="conversation-room-actions"><button onClick={()=>chat&&updateConversation(chat.id,{favorite:!chat.favorite})} title="즐겨찾기"><Star size={15} fill={chat?.favorite?"currentColor":"none"}/></button><button onClick={()=>chat&&updateConversation(chat.id,{archived:!chat.archived})} title={chat?.archived?"보관 해제":"보관"}><Archive size={15}/></button><button className="danger" onClick={()=>chat&&removeConversation(chat.id)} title="대화 삭제"><Trash2 size={15}/></button><em>{chat?.contextItems.length??0}개 자료 연결</em></div></>;})()}</header>
                 <div className="ai-conversation-messages">
-                  {messagesLoading?<div className="ai-conversation-empty"><Sparkles size={28}/><strong>대화를 불러오는 중입니다.</strong></div>:panelMessages.length?panelMessages.map(message=><article key={message.id} className={message.role}><span>{message.role==="assistant"?<Bot size={17}/>:<div className="avatar">DK</div>}</span><div><b>{message.role==="assistant"?"J SOLUTION AI":"Dean Kim"}</b><p>{message.content}</p></div></article>):<div className="ai-conversation-empty"><Sparkles size={28}/><strong>이 대화에서 이어서 질문해 보세요.</strong></div>}
+                  {messagesLoading?<div className="ai-conversation-empty"><Sparkles size={28}/><strong>대화를 불러오는 중입니다.</strong></div>:panelMessages.length?panelMessages.map(message=><article key={message.id} className={message.role}><span>{message.role==="assistant"?<Bot size={17}/>:<div className="avatar">DK</div>}</span><div><b>{message.role==="assistant"?"JSOLUTION AI":"Dean Kim"}</b><p>{message.content}</p></div></article>):<div className="ai-conversation-empty"><Sparkles size={28}/><strong>이 대화에서 이어서 질문해 보세요.</strong></div>}
                 </div>
                 <div className="ai-conversation-composer"><textarea value={conversationQuery} onChange={event=>setConversationQuery(event.target.value)} onKeyDown={event=>{if(event.key==="Enter"&&!event.shiftKey){event.preventDefault();void continueWorkspaceConversation();}}} placeholder="후속 질문을 입력하세요. Enter로 전송, Shift+Enter로 줄바꿈"/><button onClick={()=>void continueWorkspaceConversation()} disabled={!conversationQuery.trim()} aria-label="후속 질문 보내기"><Send size={18}/></button></div>
               </>:<div className="ai-conversation-welcome"><div className="ai-orb"><Sparkles size={24}/></div><h2>이어갈 대화를 선택하세요</h2><p>왼쪽 목록에서 대화를 선택하면 전체 내용과 연결 자료를 확인하고 후속 질문을 이어갈 수 있습니다.</p></div>}
@@ -2699,11 +2699,11 @@ function ProjectListWorkspace({onCreate,onOpenWbs,onOpenDashboard}:{onCreate:()=
   const sample:ProjectRecord[]=[
     {id:"sample-a",code:"PMS-2026-001",name:"A사 AI PMS 구축",customerName:"A사",startDate:"2026-07-01",endDate:"2026-09-18",status:"active",templateName:"PMS 표준 구축",templateVersion:"v2.3",memberCount:4},
     {id:"sample-b",code:"FPLM-2026-003",name:"패션 PLM 고도화",customerName:"B사",startDate:"2026-06-15",endDate:"2026-10-30",status:"active",templateName:"패션 PLM 구축",templateVersion:"v1.4",memberCount:6},
-    {id:"sample-c",code:"AI-2026-004",name:"사내 AI 전환",customerName:"J SOLUTION",startDate:"2026-08-01",endDate:"2026-12-15",status:"preparing",templateName:"빈 프로젝트",templateVersion:"v1.0",memberCount:3},
+    {id:"sample-c",code:"AI-2026-004",name:"사내 AI 전환",customerName:"JSOLUTION",startDate:"2026-08-01",endDate:"2026-12-15",status:"preparing",templateName:"빈 프로젝트",templateVersion:"v1.0",memberCount:3},
   ];
   const source=items.length?items:sample;
   const projectMeta=(project:ProjectRecord,index:number)=>({
-    type:(project.templateName||"").includes("패션")?"PLM":project.customerName==="J SOLUTION"?"내부 프로젝트":"PMS",
+    type:(project.templateName||"").includes("패션")?"PLM":project.customerName==="JSOLUTION"?"내부 프로젝트":"PMS",
     pm:index%3===0?"Dean Kim":index%3===1?"박지연":"김서준",
     health:index%3===0?"주의":index%3===1?"양호":"관찰",
     attention:index%3===0?["지연 Task","열린 이슈"]:index%3===1?["열린 이슈"]:["지연 Task","산출물 미등록"],
@@ -3259,7 +3259,7 @@ function AdminWorkspace({tab,projectStep,setProjectStep,createdProject,setCreate
 <button className="root active">
 <Building2 size={17}/>
 <span>
-<strong>J SOLUTION</strong>
+<strong>JSOLUTION</strong>
 <small>전체 12명</small>
 </span>
 <ChevronDown size={16}/>
@@ -3278,7 +3278,7 @@ function AdminWorkspace({tab,projectStep,setProjectStep,createdProject,setCreate
 <header>
 <div>
 <h2>사용자 · 역할</h2>
-<p>J SOLUTION 전체 사용자</p>
+<p>JSOLUTION 전체 사용자</p>
 </div>
 <button>
 <UserCog size={15}/> 사용자 초대</button>

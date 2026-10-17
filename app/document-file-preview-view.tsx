@@ -55,7 +55,7 @@ export default function DocumentFilePreviewView({data}:{data:DocumentPreviewData
       <div className="document-native-preview-stage">
         {state.kind==="loading"?<div className="document-native-preview-empty"><LoaderCircle size={28}/><strong>문서를 불러오는 중입니다.</strong></div>:
         state.kind==="error"?<div className="document-native-preview-empty"><FileText size={30}/><strong>{state.message}</strong><p>원본 다운로드로 파일을 확인할 수 있습니다.</p></div>:
-        state.kind==="text"?<article className="document-native-preview-paper"><h1>{data.title}</h1><div className="document-native-preview-rule"/><pre>{state.text}</pre><footer>J SOLUTION AI PMS · 등록 문서 미리보기</footer></article>:
+        state.kind==="text"?<article className="document-native-preview-paper"><h1>{data.title}</h1><div className="document-native-preview-rule"/><pre>{state.text}</pre><footer>JSOLUTION AI PMS · 등록 문서 미리보기</footer></article>:
         state.contentType.startsWith("image/")?<div className="document-native-image-preview"><img src={state.url} alt={data.title}/></div>:
         state.contentType.includes("pdf")?<iframe className="document-native-pdf-preview" src={state.url} title={`${data.title} 미리보기`}/>:
         <div className="document-native-preview-empty"><FileText size={30}/><strong>이 파일 형식은 브라우저 직접 미리보기를 지원하지 않습니다.</strong><p>{data.fileName}</p></div>}

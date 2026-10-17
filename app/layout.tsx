@@ -43,7 +43,7 @@ import ProjectSuperuserActions from "./project-superuser-actions";
 import GlobalAiPanelShift from "./global-ai-panel-shift";
 
 export const metadata: Metadata = {
-  title: "J SOLUTION AI PMS | MY AI HOME",
+  title: "JSOLUTION AI PMS | MY AI HOME",
   description: "실제 프로젝트 데이터로 오늘의 업무와 위험을 알려주는 AI 중심 PMS",
   other: { "codex-preview": "development" },
   icons: { icon: "/favicon.svg", shortcut: "/favicon.svg" },

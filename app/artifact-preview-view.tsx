@@ -45,8 +45,8 @@ export default function ArtifactPreviewView({data}:{data:ArtifactPreviewData}){
       </div>
       <div className="ai-artifact-preview-stage">
         {data.type==="xlsx"?<div className="ai-artifact-sheet"><table><tbody>{artifactRows(data.content).map((row,rowIndex)=><tr key={rowIndex}>{row.map((cell,colIndex)=><td key={colIndex}>{cell}</td>)}</tr>)}</tbody></table></div>:
-        data.type==="image"?<div className="ai-artifact-image-page"><div className="ai-artifact-image-card"><span>J SOLUTION AI</span><h1>{data.title}</h1><p>{data.content}</p></div></div>:
-        <article className={`ai-artifact-page ${data.type==="pptx"?"slide":"document"}`}><h1>{data.title}</h1><div className="ai-artifact-rule"/><div className="ai-artifact-copy">{pages[current]||data.content}</div><footer>J SOLUTION AI PMS · AI 생성 자료</footer></article>}
+        data.type==="image"?<div className="ai-artifact-image-page"><div className="ai-artifact-image-card"><span>JSOLUTION AI</span><h1>{data.title}</h1><p>{data.content}</p></div></div>:
+        <article className={`ai-artifact-page ${data.type==="pptx"?"slide":"document"}`}><h1>{data.title}</h1><div className="ai-artifact-rule"/><div className="ai-artifact-copy">{pages[current]||data.content}</div><footer>JSOLUTION AI PMS · AI 생성 자료</footer></article>}
       </div>
     </section>
   </div>;
