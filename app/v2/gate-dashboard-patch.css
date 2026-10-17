@@ -108,6 +108,12 @@
   font-size:var(--v2-font-size-screen-title);
   font-weight:700;
 }
+
+.wv2-project-dashboard>.summary:not(.wv2-production-summary)>article>span:first-child{
+  color:var(--v2-color-ink);
+  font-size:var(--v2-font-size-screen-title);
+  font-weight:var(--v2-font-weight-bold);
+}
 .wv2-project-dashboard .wv2-production-summary>.wv2-production-overall strong{
   font-size:var(--v2-font-size-body);
   font-weight:700;
