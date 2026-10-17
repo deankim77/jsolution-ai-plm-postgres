@@ -191,7 +191,7 @@ export function ContinuingAiHomeWorkspace(){
   const selectedContextSummary=selected?Array.from(new Set([selected.contextTitle.split(" · 선택")[0],...selected.contextItems.map(item=>`${item.kind||"문맥"}: ${item.title||item.fileName||"제목 없음"}`)].filter(Boolean))).join(" · "):"";
 
   return <section className="wv2-module wv2-ai-home wv2-ai-library">
-    <header className="wv2-module-head"><div className="wv2-module-head-main"><small>MY AI HOME · AI LIBRARY</small><div className="wv2-module-title-row"><h1>나의 AI 업무 공간</h1><p>(우측 패널과 모든 업무 공간에서 시작한 AI 대화를 같은 문맥으로 계속 이어갑니다.)</p></div></div><div className="wv2-module-count"><b>{conversations.length}</b><span>저장 대화</span></div></header>
+    <header className="wv2-module-head"><div className="wv2-module-head-main"><small>MY AI HOME · AI LIBRARY</small><div className="wv2-module-title-row"><h1>나의 AI 업무 공간</h1><p>우측 패널과 모든 업무 공간에서 시작한 AI 대화를 같은 문맥으로 계속 이어갑니다.</p></div></div><div className="wv2-module-count"><b>{conversations.length}</b><span>저장 대화</span></div></header>
     <div className="wv2-ai-home-grid">
       <aside>
         <label><Search size={18}/><input value={query} onChange={event=>setQuery(event.target.value)} placeholder="대화·프로젝트 검색"/></label>
