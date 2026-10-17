@@ -2900,8 +2900,8 @@
 .wv2-gate-customer-matrix{grid-column:1/-1}
 .wv2-gate-customer-matrix>div{display:grid;grid-template-columns:150px minmax(220px,1fr) 70px;align-items:center;gap:12px;min-height:48px;border-bottom:1px solid #e9eef1;padding:7px 13px;font-size:var(--v2-font-size-body)}
 .wv2-gate-customer-matrix>div>span{color:var(--muted)}
-.wv2-gate-customer-matrix em{justify-self:end;border-radius:12px;background:#edf3f5;padding:5px 8px;color:#52656f;font-size:var(--v2-font-size-caption);font-style:normal}
-.wv2-gate-customer-matrix em.risk{background:#fff0ee;color:#b42318}
+.wv2-gate-customer-matrix em{justify-self:end;color:#52656f;font-size:var(--v2-font-size-caption);font-style:normal}
+.wv2-gate-customer-matrix em.risk{color:#b42318}
 .wv2-gate-operations{grid-column:1/-1}
 .wv2-gate-health{display:grid;grid-template-columns:repeat(6,minmax(120px,1fr));gap:8px;padding:12px}
 .wv2-gate-health>div{min-height:82px;display:grid;align-content:start;gap:4px;border:1px solid #dce6e7;border-radius:8px;background:#f9fbfc;padding:9px 10px}
