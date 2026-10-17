@@ -13,10 +13,11 @@ export function productionStages(tasks:Task[]){
     return {code,name:group?.name.replace(new RegExp("^"+code+"\\s*"),"")||"",status:!group?"missing":children.length>0&&completed===children.length?"completed":active?"active":"planned",completed,total:children.length};
   });
 }
-export function productionProgress(tasks:Task[]){
-  const leaves=tasks.filter(task=>task.kind==="task"),weight=leaves.reduce((sum,task)=>sum+Math.max(1,Number(task.durationDays)||1),0);
+export function productionProgress(tasks:Task[],today=new Date().toLocaleDateString("sv-SE")){
+  const currentDay=day(today),leaves=tasks.filter(task=>task.kind==="task");
+  const weight=leaves.reduce((sum,task)=>sum+Math.max(1,Number(task.durationDays)||1),0);
   const progress=weight?Math.round(leaves.reduce((sum,task)=>sum+Math.max(1,Number(task.durationDays)||1)*Math.max(0,Math.min(100,Number(task.progress)||0)),0)/weight):0;
-  const today=Date.now()/86400000,plans=leaves.map(task=>{const start=day(task.plannedStart),end=day(task.plannedEnd);return start===null||end===null||end<start?null:Math.max(0,Math.min(1,(today-start+1)/(end-start+1)))*100});
+  const plans=leaves.map(task=>{const start=day(task.plannedStart),end=day(task.plannedEnd);return start===null||end===null||currentDay===null||end<start?null:Math.max(0,Math.min(1,(currentDay-start+1)/(end-start+1)))*100});
   const plannedProgress=weight&&plans.every(value=>value!==null)?Math.round(plans.reduce<number>((sum,value,index)=>sum+(value??0)*Math.max(1,Number(leaves[index].durationDays)||1),0)/weight):null;
   return {progress,plannedProgress,delay:plannedProgress===null?null:Math.max(0,plannedProgress-progress)};
 }
