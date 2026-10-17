@@ -40,3 +40,17 @@
 .pcw-bom-table .pcw-part-tree{display:flex;align-items:center;gap:6px;min-width:0;white-space:nowrap;color:var(--teal-dark)}
 .pcw-part-tree>b{overflow:hidden;text-overflow:ellipsis}
 .pcw-part-tree>svg{flex-shrink:0}
+
+/* Keep the project-cost BOM tree aligned with the CS WIND cost workspace. */
+.pcw-shell .pbom-tree-label{display:flex;align-items:center;gap:8px}
+.pcw-shell .pbom-tree-label button{display:inline-flex;align-items:center}
+.pcw-shell .pbom-toggle-slot{display:inline-flex;flex:0 0 var(--v2-icon-size);width:var(--v2-icon-size);align-items:center;justify-content:center}
+.pcw-shell :is(.pbom-review-tree-label,.pbom-part-tree-label) .pbom-toggle-slot button{display:inline-flex;align-items:center;justify-content:center;width:var(--v2-icon-size);min-height:var(--v2-control-height);padding:0;border:0;background:transparent}
+.pcw-shell .pbom-part-tree-label{min-width:max-content;color:var(--v2-color-primary-dark)}
+.pcw-shell .pbom-part-tree-label>button{font-weight:var(--v2-font-weight-bold);white-space:nowrap}
+.pcw-shell .pbom-part-tree-label>svg{flex-shrink:0}
+.pcw-shell .pbom-part-dot{width:6px;height:6px;flex:0 0 6px;border-radius:50%;background:var(--muted)}
+.pcw-shell .pbom-part-dot.is-assembly{background:var(--v2-color-primary)}
+.pcw-shell .pcw-bom-toolbar .table-view-action{display:inline-flex;align-items:center;justify-content:center;gap:6px;height:var(--v2-control-height);box-sizing:border-box;padding:0 10px;border:1px solid var(--v2-border-color);border-radius:var(--v2-radius-sm);background:var(--v2-surface-content);color:var(--v2-color-ink);font-size:var(--v2-font-size-control);font-weight:var(--v2-font-weight-bold);white-space:nowrap}
+.pcw-shell .pcw-bom-toolbar .table-view-action svg{width:var(--v2-icon-size);height:var(--v2-icon-size);flex-shrink:0}
+.pcw-shell .pcw-bom-toolbar .table-view-action:disabled{opacity:.45;cursor:not-allowed}
