@@ -216,7 +216,7 @@
   text-align:left;
 }
 .wv2-gate-flow.wv2-dashboard-gate-flow .wv2-gate-detail-status{
-  font-size:var(--v2-font-size-caption);
+  font-size:var(--v2-font-size-card-title);
   font-weight:700;
 }
 .wv2-gate-flow.wv2-dashboard-gate-flow .wv2-gate-node-wrap>button>small{
