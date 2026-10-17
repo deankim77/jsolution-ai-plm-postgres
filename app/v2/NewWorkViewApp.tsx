@@ -273,7 +273,7 @@ export default function NewWorkViewApp(){
       const refreshed=await fetch(`/api/projects/${project.id}/wbs`,{cache:"no-store"});
       if(!refreshed.ok)throw new Error("저장된 WBS를 다시 불러오지 못했습니다.");
       const data=await refreshed.json() as {tasks?:Task[]};
-      const next=recalculateSchedule(data.tasks??[]);setTasks(next);setSelectedId(next.find(item=>item.kind==="task")?.id??next[0]?.id??"");setSaveNotice("저장했습니다.");
+      const next=recalculateSchedule(data.tasks??[]);setTasks(next);setSelectedId(next.find(item=>item.kind==="task")?.id??next[0]?.id??"");setSaveNotice("");
     }catch(error){setSaveNotice(error instanceof Error?error.message:"WBS를 저장하지 못했습니다.");}
     finally{setSaving(false)}
   };
