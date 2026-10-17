@@ -22,4 +22,3 @@
 @media(max-width:1200px){.pcw-kpis,.pcw-entry-summary,.pcw-bom-summary>div{grid-template-columns:repeat(2,1fr)}.pcw-budget-table .rows{overflow-x:auto}.pcw-budget-table .rows>.th,.pcw-budget-table .rows>.tr{min-width:950px}.pcw-category-list{grid-template-columns:repeat(2,1fr)}.pcw-root-list>article{grid-template-columns:66px minmax(220px,1fr) 180px 160px 36px}}
 
 .pcw-budget-register-table .rows>.th,.pcw-budget-register-table .rows>.tr{grid-template-columns:120px minmax(300px,1fr) minmax(210px,280px)}
-.pcw-budget-linked{display:grid;gap:2px}.pcw-budget-linked small{font-size:var(--v2-font-size-caption);color:#778891}
