@@ -18,9 +18,11 @@ test("WBS 편집 표는 15개 열을 한 colgroup으로 관리하고 긴 Gate �
   const html=SSR.renderToStaticMarkup(React.createElement(Editor,props));
   const cols=html.match(/<colgroup>(.*?)<\/colgroup>/)[1];
   assert.equal((cols.match(/<col /g)||[]).length,15);
+  assert(!cols.includes('class="actions"'));
+  assert.equal((cols.match(/class="wv2-wbs-col-/g)||[]).length,15);
   assert(html.includes('class="wv2-wbs-code-value" title="G1-REVIEW">G1-REVIEW</span>'));
   const css=read("app/v2/work-view-v2.css");
-  assert(css.includes("col.wbs-code{width:136px}"));
+  assert(css.includes("col.wv2-wbs-col-wbs-code{width:136px}"));
   assert(!/\.wv2-advanced-wbs-editor th:nth-child/.test(css));
   assert(css.includes(".wv2-wbs-code-value{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}"));
 });
