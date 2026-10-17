@@ -3002,3 +3002,10 @@
 .wv2-issue-table .wv2-issue-wbs>b,.wv2-issue-table .wv2-issue-wbs>small{display:block;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .wv2-issue-table .wv2-issue-wbs>b{font-size:var(--v2-font-size-body)}
 .wv2-issue-table .wv2-issue-wbs>small{color:var(--muted);font-size:var(--v2-font-size-caption)}
+
+
+/* Keep the existing heading and description typography while placing them on one line. */
+.wv2-module-head-main{flex:1;min-width:0}
+.wv2-module-title-row{display:flex;align-items:baseline;gap:12px;min-width:0}
+.wv2-module-title-row h1{flex:0 0 auto}
+.wv2-module-title-row p{margin:0;white-space:nowrap}
