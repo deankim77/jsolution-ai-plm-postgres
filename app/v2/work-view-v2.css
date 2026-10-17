@@ -3009,3 +3009,16 @@
 .wv2-module-title-row{display:flex;align-items:baseline;gap:12px;min-width:0}
 .wv2-module-title-row h1{flex:0 0 auto}
 .wv2-module-title-row p{margin:0;white-space:nowrap}
+
+
+/* Normalize workspace page titles to the shared screen-title size and bold weight. */
+.wv2-module-head .wv2-module-title-row h1,
+.wv2-page-title .wv2-module-title-row h1,
+.wv2-portfolio-dashboard .wv2-module-title-row h1,
+.wv2-project-dashboard .wv2-module-title-row h1,
+.pbw-head .wv2-module-title-row h1,
+.pcw-head .wv2-module-title-row h1,
+.wv2-project-head h1 {
+  font-size: var(--v2-font-size-screen-title);
+  font-weight: 700;
+}
