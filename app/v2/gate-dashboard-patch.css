@@ -1,6 +1,6 @@
 .wv2-gate-customer-matrix>.wv2-gate-matrix-table{display:block;min-height:0;overflow-x:auto;border:1px solid var(--line);border-radius:var(--v2-radius-sm);padding:0;font-size:var(--v2-font-size-body);background:#fff}
 .wv2-gate-matrix-table>header,.wv2-gate-matrix-table>.row{display:grid;grid-template-columns:minmax(180px,1.45fr) repeat(6,minmax(118px,1fr)) minmax(110px,.9fr);align-items:stretch;gap:0;min-width:1040px;min-height:38px;padding:0}
-.wv2-gate-matrix-table>header{background:var(--surface-soft);color:var(--muted);font-size:var(--v2-font-size-caption);font-weight:800}
+.wv2-gate-matrix-table>header{background:var(--surface-soft);color:var(--muted);font-size:var(--v2-font-size-table-header);font-weight:700}
 .wv2-gate-matrix-table>header>* ,.wv2-gate-matrix-table>.row>*{min-width:0;padding:6px 9px;text-align:center;border-right:1px solid var(--line);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .wv2-gate-matrix-table>header>*{display:flex;align-items:center;justify-content:center}
 .wv2-gate-matrix-table>header>*:first-child,.wv2-gate-matrix-table>.row>*:first-child{text-align:left;font-weight:800}
@@ -19,10 +19,10 @@
 .wv2-gate-health{grid-template-columns:repeat(6,minmax(145px,1fr));gap:10px;padding:12px}
 .wv2-gate-health>div{min-height:108px;gap:8px;padding:11px 12px}
 .wv2-gate-health .health-score{display:flex;align-items:baseline;justify-content:space-between;gap:8px}
-.wv2-gate-health .health-score strong{font-size:var(--v2-font-size-title)}
+.wv2-gate-health .health-score strong{font-size:var(--v2-font-size-card-title);font-weight:700}
 .wv2-gate-health .health-meter{height:12px;border-radius:999px;background:#e7edef;overflow:hidden}
 .wv2-gate-health .health-meter>span{display:block;height:100%;background:var(--teal)}
-.wv2-gate-health>div>small{color:#41535f;font-size:var(--v2-font-size-body);font-weight:800;line-height:1.45;white-space:normal}
+.wv2-gate-health>div>small{color:#41535f;font-size:var(--v2-font-size-caption);font-weight:400;line-height:1.45;white-space:normal}
 .wv2-gate-health-guide{display:flex;align-items:center;justify-content:flex-end;gap:4px;flex-wrap:wrap;color:var(--muted);font-size:var(--v2-font-size-caption);line-height:1.35;text-align:right}
 .wv2-gate-health-guide>b{color:var(--ink)}
 
@@ -38,14 +38,12 @@
 .wv2-issue-risk-bar>i>span{display:block;width:100%;min-height:0;border-radius:4px 4px 0 0;background:var(--teal)}
 .wv2-issue-risk-bar.risk>i>span{background:#d97706}
 .wv2-issue-risk-bar.collaboration>i>span{background:#4f7db8}
-.wv2-issue-risk-bar>small{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:var(--v2-font-size-caption);color:var(--muted);font-weight:700}
-.wv2-issue-risk-histogram-item>b{align-self:start;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:var(--v2-font-size-caption);font-weight:800}
+.wv2-issue-risk-bar>small{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:var(--v2-font-size-body);color:var(--muted);font-weight:700}
+.wv2-issue-risk-histogram-item>b{align-self:start;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:var(--v2-font-size-body);font-weight:700}
 
 /* Portfolio dashboard customer Gate matrix: match the card system used above */
 .wv2-gate-customer-matrix{overflow:hidden;border:1px solid var(--line);border-radius:var(--v2-radius-md);background:#fff}
 .wv2-gate-customer-matrix>header{min-height:46px;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 12px;border-bottom:1px solid var(--line);background:#fff}
-.wv2-gate-customer-matrix>header>b{font-size:0}
-.wv2-gate-customer-matrix>header>b::after{content:"거래처 별 프로젝트 Gate 현황";font-size:var(--v2-font-size-section-title);font-weight:900;color:var(--ink)}
 .wv2-gate-customer-matrix>header>span{color:var(--muted);font-size:var(--v2-font-size-caption)}
 .wv2-gate-customer-matrix>.wv2-gate-matrix-table{margin:10px 12px 12px;width:calc(100% - 24px)}
 
@@ -81,6 +79,7 @@
   font-weight:400;
   line-height:1.35;
 }
+.wv2-portfolio-dashboard>.summary b,
 .wv2-project-dashboard .summary b{
   font-size:var(--v2-font-size-section-title);
   font-weight:700;
@@ -135,6 +134,11 @@
   color:var(--v2-color-primary);
 }
 .wv2-project-dashboard .wv2-project-shortcuts>button>span{gap:6px}
+.wv2-portfolio-dashboard>.summary>button>span,
+.wv2-portfolio-dashboard>.wv2-gate-portfolio>section>header>b,
+.wv2-portfolio-dashboard>.charts>section>header>b,
+.wv2-portfolio-dashboard>.wv2-gate-customer-matrix>header>b,
+.wv2-portfolio-dashboard .health-score>b,
 .wv2-project-dashboard>.summary>article>span:first-child,
 .wv2-project-dashboard .wv2-production-summary>.wv2-production-overall>span:first-child,
 .wv2-project-dashboard .wv2-project-shortcuts>button b,
