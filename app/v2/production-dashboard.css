@@ -11,4 +11,6 @@
 .wv2-project-dashboard .summary .wv2-production-overall>span{font-size:var(--v2-font-size-caption);line-height:var(--v2-line-height-body);color:var(--v2-color-ink)}
 .wv2-production-overall strong{font-size:var(--v2-font-size-body);font-variant-numeric:tabular-nums}
 
-.wv2-project-dashboard .wv2-production-summary>article>span:first-child{font-size:var(--v2-font-size-section-title);font-weight:var(--v2-font-weight-bold);color:var(--v2-color-ink)}
+.wv2-project-dashboard .wv2-production-summary>article>span:first-child{font-size:var(--v2-font-size-screen-title);font-weight:var(--v2-font-weight-bold);color:var(--v2-color-ink)}
+
+.wv2-project-dashboard>.summary:not(.wv2-production-summary)>article>span:first-child{font-size:var(--v2-font-size-screen-title);font-weight:var(--v2-font-weight-bold)}
