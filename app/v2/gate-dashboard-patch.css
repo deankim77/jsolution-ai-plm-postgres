@@ -38,7 +38,7 @@
 .wv2-issue-risk-bar>i>span{display:block;width:100%;min-height:0;border-radius:4px 4px 0 0;background:var(--teal)}
 .wv2-issue-risk-bar.risk>i>span{background:#d97706}
 .wv2-issue-risk-bar.collaboration>i>span{background:#4f7db8}
-.wv2-issue-risk-bar>small{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:10px;color:var(--muted);font-weight:700}
+.wv2-issue-risk-bar>small{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:var(--v2-font-size-caption);color:var(--muted);font-weight:700}
 .wv2-issue-risk-histogram-item>b{align-self:start;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:var(--v2-font-size-caption);font-weight:800}
 
 /* Portfolio dashboard customer Gate matrix: match the card system used above */
@@ -201,7 +201,7 @@
   grid-template-columns:repeat(6,minmax(216px,1fr));
   gap:12px;
   overflow-x:auto;
-  padding:0;
+  padding:16px;
   align-items:stretch;
 }
 .wv2-gate-flow.wv2-dashboard-gate-flow .wv2-gate-node-wrap{
@@ -210,6 +210,7 @@
 }
 .wv2-gate-flow.wv2-dashboard-gate-flow .wv2-gate-node-wrap>button{
   display:grid;
+  box-sizing:border-box;
   width:100%;
   min-height:154px;
   align-content:start;
