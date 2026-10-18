@@ -115,5 +115,3 @@
 .wv2-preview-document-table>article>.wv2-document-preview-link{grid-column:8!important}
 .wv2-preview-document-table>article>.wv2-document-wbs-link:hover,
 .wv2-preview-document-table>article>.wv2-document-preview-link:hover{background:#f3f8f7;border-color:#9fc2be}
-
-.wv2-preview-document-table>header>span:last-child{grid-column:7 / 9}

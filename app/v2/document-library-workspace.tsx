@@ -1,5 +1,6 @@
 "use client";
 
+import {useColumnFilters,V2FilterHeader} from "./use-column-filters";
 import {lazy,Suspense,useEffect,useRef,useState} from "react";
 import {FileImage,FileSpreadsheet,FileText,FileType2,Filter,Plus,RefreshCw,Upload,X} from "lucide-react";
 import type {V2Project} from "./project-workspaces";
@@ -127,8 +128,9 @@ export default function DocumentLibraryWorkspace({project,projects,tasks,initial
     return()=>controller.abort();
   },[libraryMode,refreshVersion,projectFilter,filters]);
 
-  const visibleItems=items.filter(item=>matchesQuery(item,latestFor(item.id)));
-  useEffect(()=>setTotal(visibleItems.length),[items,versions,debouncedQuery]);
+  const columnFilters=useColumnFilters(items,[{key:"category",label:"카테고리",value:item=>categoryLabel(item.type)},{key:"project",label:"프로젝트",value:item=>item.projectName||"프로젝트 미지정"},{key:"author",label:"작성자",value:item=>latestFor(item.id)?.createdBy||"작성자 미상"},{key:"revision",label:"Revision",value:item=>`Rev.${String(latestFor(item.id)?.revision||0).padStart(2,"0")}`},{key:"status",label:"상태",value:item=>statusLabel(item.status)}]);
+  const visibleItems=columnFilters.rows.filter(item=>matchesQuery(item,latestFor(item.id)));
+  useEffect(()=>setTotal(visibleItems.length),[visibleItems.length]);
 
   useEffect(()=>{
     if(!filterOpen||!onOpenFilter)return;
@@ -279,7 +281,7 @@ export default function DocumentLibraryWorkspace({project,projects,tasks,initial
         </div>
         {loading&&!items.length?<div className="wv2-preview-empty"><RefreshCw className="wv2-spin" size={25}/><b>등록 문서를 불러오는 중…</b></div>
         :<div className="wv2-document-table wv2-preview-document-table">
-          <header><span className="select"><input type="checkbox" checked={Boolean(visibleItems.length)&&visibleItems.every(item=>selection.has(contextFor(item)))} onChange={()=>visibleItems.every(item=>selection.has(contextFor(item)))?selection.clear():visibleItems.forEach(item=>{if(!selection.has(contextFor(item)))selection.toggle(contextFor(item))})}/></span><span>산출물</span><span>프로젝트 · WBS</span><span>작성자 · 작성일</span><span>Revision</span><span>상태</span><span/></header>
+          <V2FilterHeader><span className="select"><input type="checkbox" checked={Boolean(visibleItems.length)&&visibleItems.every(item=>selection.has(contextFor(item)))} onChange={()=>{const all=visibleItems.every(row=>selection.has(contextFor(row)));visibleItems.forEach(item=>{const context=contextFor(item);if(all?selection.has(context):!selection.has(context))selection.toggle(context)})}}/></span>{columnFilters.heading("category","산출물")}{columnFilters.heading("project","프로젝트 · WBS")}{columnFilters.heading("author","작성자 · 작성일")}{columnFilters.heading("revision")}{columnFilters.heading("status")}<span/><span/></V2FilterHeader>
           {visibleItems.map(item=>{const latest=latestFor(item.id),Icon=latest?iconFor(latest.fileName):FileText,drawing=isDrawing(item);return <article key={item.id} onClick={()=>onOpenDetail?.(item.id)}>
             <span className="select"><input type="checkbox" checked={selection.has(contextFor(item))} onClick={event=>event.stopPropagation()} onChange={()=>selection.toggle(contextFor(item))}/></span>
             <button className="name"><Icon size={18}/><span><b>{item.name}</b><small>{drawing?`${item.drawingCode||"도면코드"} · ${drawingTypeLabel(item.drawingType)}`:categoryLabel(item.type)}</small></span></button>

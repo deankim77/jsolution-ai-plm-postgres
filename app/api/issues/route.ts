@@ -1,4 +1,5 @@
 import { getLegacyDbCompat } from "../../../db/postgres-d1-compat";
+import {parseIssueColumnFilters} from "../../../services/issue-column-filter-service";
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import {contextErrorResponse,resolveRequestContext} from "../../../db/request-context";
 
@@ -36,11 +37,17 @@ export async function GET(request:Request){
     const accessSql=`p.company_id=? AND (?=1 OR EXISTS (SELECT 1 FROM project_members pm WHERE pm.project_id=p.id AND pm.user_id=?))`;
     const filters=[accessSql];
     const values:unknown[]=[context.companyId,isAdmin?1:0,context.userId];
-    if(projectId){filters.push("i.project_id=?");values.push(projectId)}
-    if(type&&type!=="all"){filters.push("i.issue_type=?");values.push(type)}
-    if(status&&status!=="all"){filters.push("i.status=?");values.push(status)}
+    const multi=parseIssueColumnFilters(url.searchParams);
+    const include=(column:string,items:string[])=>{filters.push(`${column} IN (${items.map(()=>"?").join(",")})`);values.push(...items)};
+    if(multi.projectIds.length)include("i.project_id",multi.projectIds);
+    else if(projectId){filters.push("i.project_id=?");values.push(projectId)}
+    if(multi.types.length)include("i.issue_type",multi.types);
+    else if(type&&type!=="all"){filters.push("i.issue_type=?");values.push(type)}
+    if(multi.statuses.length)include("i.status",multi.statuses);
+    else if(status&&status!=="all"){filters.push("i.status=?");values.push(status)}
     if(severities.length){filters.push(`i.severity IN (${severities.map(()=>"?").join(",")})`);values.push(...severities)}
-    if(owner){filters.push("owner.name=?");values.push(owner)}
+    if(multi.owners.length)include("COALESCE(owner.name,'미지정')",multi.owners);
+    else if(owner){filters.push("owner.name=?");values.push(owner)}
     if(dueFrom){filters.push("i.due_date>=?");values.push(dueFrom)}
     if(dueTo){filters.push("i.due_date<=?");values.push(dueTo)}
     if(attachments==="yes")filters.push("EXISTS(SELECT 1 FROM issue_attachments ax WHERE ax.issue_id=i.id)");

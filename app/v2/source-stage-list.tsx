@@ -1,4 +1,5 @@
 "use client";
+import {useColumnFilters,V2FilterHeader} from "./use-column-filters";
 import {ChevronRight} from "lucide-react";
 import {masterCodeLabel,useMasterData} from "./master-data-store";
 import {useAiContextSelection} from "./ai-context-selection";
@@ -18,7 +19,7 @@ const severityLabels:Record<string,string>={low:"낮음",medium:"보통",high:"�
 const priorityLabels:Record<string,string>={normal:"보통",high:"높음",urgent:"긴급"};
 const checkboxStyle={width:15,height:15,margin:0,accentColor:"var(--teal)",cursor:"pointer",flex:"0 0 auto"} as const;
 
-export function SourceStageList({kind,rows,onOpen,onEditSource}:{kind:"ECR"|"QUALITY";rows:SourceRow[];onOpen:(workflowId:string)=>void;onEditSource?:(sourceId:string)=>void}){
+export function SourceStageList({kind,rows:inputRows,onOpen,onEditSource,onFilteredCount}:{kind:"ECR"|"QUALITY";rows:SourceRow[];onFilteredCount?:(count:number)=>void;onOpen:(workflowId:string)=>void;onEditSource?:(sourceId:string)=>void}){
   const ecr=kind==="ECR";
   const selection=useAiContextSelection(ecr?"설계변경":"품질관리");
   const {data,loading}=useMasterData();
@@ -27,10 +28,12 @@ export function SourceStageList({kind,rows,onOpen,onEditSource}:{kind:"ECR"|"QUA
   const drawingText=(row:SourceRow)=>row.drawingCode?`${row.drawingCode}${row.drawingName?` · ${row.drawingName}`:""}${row.drawingProjectCode?` · ${row.drawingProjectCode}${row.drawingProjectName?` ${row.drawingProjectName}`:""}`:""}`:"도면 미지정";
   const projectText=(row:SourceRow)=>row.projectName||"프로젝트 미연결";
   const contextFor=(row:SourceRow)=>{const status=row.workflowStatus||row.status,number=ecr?row.ecrNumber:row.qualityNumber,type=ecr?(codeLabel("DESIGN_CHANGE_TYPE",row.changeType)||row.changeType||"유형 미지정"):(codeLabel("QUALITY_ISSUE_TYPE",row.issueType)||row.issueType||"유형 미지정"),severity=ecr?(row.priority?`우선순위 ${priorityLabels[row.priority]||row.priority}`:"우선순위 미지정"):(severityLabels[row.severity||""]||"심각도 미지정");return {id:row.id,kind:ecr?"설계변경":"품질관리",title:`${number?`[${number}] `:""}${row.title}`,meta:`${projectText(row)} · 관련 PART ${partText(row)} · 관련 도면 ${drawingText(row)} · ${row.workflowId?`현재 단계 ${row.currentStepName||"작성"} · 처리자 ${row.currentAssigneeName||"미배정"}`:"Workflow 미연결"} · ${type} · ${severity} · 기한 ${row.dueDate||"미정"} · ${statusLabels[status]||status}`}};
+  const columnFilters=useColumnFilters(inputRows,[{key:"project",label:"대상 프로젝트",value:row=>projectText(row)},{key:"processor",label:"현재 단계·처리자",value:row=>`${row.currentStepName||"Workflow 미연결"} · ${row.currentAssigneeName||"미배정"}`},{key:"type",label:"유형",value:row=>codeLabel(ecr?"DESIGN_CHANGE_TYPE":"QUALITY_ISSUE_TYPE",ecr?row.changeType:row.issueType)||(ecr?row.changeType:row.issueType)||"유형 미지정"},{key:"due",label:"기한",value:row=>row.dueDate,date:true},{key:"status",label:"상태",value:row=>statusLabels[row.workflowStatus||row.status]||row.workflowStatus||row.status}],onFilteredCount);
+  const rows=columnFilters.rows;
   const allSelected=Boolean(rows.length)&&rows.every(row=>selection.has(contextFor(row)));
   const toggleAll=()=>rows.forEach(row=>{const item=contextFor(row);if(allSelected?selection.has(item):!selection.has(item))selection.toggle(item)});
   return <div className="wv2-workflow-table stage-table source-stage-table">
-    <header><span style={{display:"flex",alignItems:"center",gap:8}}><input type="checkbox" aria-label={`${ecr?"설계변경":"품질문제"} 전체 선택`} checked={allSelected} onChange={toggleAll} style={checkboxStyle}/>{ecr?"설계변경":"품질문제"}</span><span>대상 프로젝트</span><span>전체 단계</span><span>현재 단계·처리자</span><span>유형·관련 대상</span><span>기한</span><span>상태</span><span/></header>
+    <V2FilterHeader><span style={{display:"flex",alignItems:"center",gap:8}}><input type="checkbox" aria-label={`${ecr?"설계변경":"품질문제"} 전체 선택`} checked={allSelected} onChange={toggleAll} style={checkboxStyle}/>{ecr?"설계변경":"품질문제"}</span>{columnFilters.heading("project")}<span>전체 단계</span>{columnFilters.heading("processor")}{columnFilters.heading("type","유형·관련 대상")}{columnFilters.heading("due")}{columnFilters.heading("status")}<span/></V2FilterHeader>
     {rows.map(row=>{const flow=String(row.stepFlow||"").split("~").filter(Boolean).map(value=>{const [name,status]=value.split("|");return {name,status}});const status=row.workflowStatus||row.status,item=contextFor(row),checked=selection.has(item);return <button key={row.id} onClick={()=>row.workflowId?onOpen(row.workflowId):onEditSource?.(row.id)}>
       <span className="workflow-primary" style={{display:"flex",alignItems:"flex-start",gap:8}}><input type="checkbox" aria-label={`${ecr?"설계변경":"품질문제"} AI 선택`} checked={checked} onClick={event=>event.stopPropagation()} onChange={event=>{event.stopPropagation();selection.toggle(item)}} style={{...checkboxStyle,marginTop:2}}/><span style={{display:"grid",minWidth:0}}><b>{ecr?row.ecrNumber:row.qualityNumber}</b><small>{row.title}</small></span></span>
       <span><b>{projectText(row)}</b><small>{row.projectCode||"회사 공통 Draft"}</small></span>
@@ -39,6 +42,6 @@ export function SourceStageList({kind,rows,onOpen,onEditSource}:{kind:"ECR"|"QUA
       <span>{ecr?<><b>{codeLabel("DESIGN_CHANGE_TYPE",row.changeType)||(loading?"유형 확인 중":"유형 미지정")}</b><small>{partText(row)} · {drawingText(row)}{row.priority?` · ${priorityLabels[row.priority]||row.priority}`:""}</small></>:<><b>{codeLabel("QUALITY_ISSUE_TYPE",row.issueType)||(loading?"유형 확인 중":"유형 미지정")}</b><small>{partText(row)} · {drawingText(row)} · {severityLabels[row.severity||""]||"심각도 미지정"}</small></>}</span>
       <span><b>{row.dueDate||"미정"}</b><small>{row.dueDate&&row.dueDate<new Date().toISOString().slice(0,10)&&status==="in_progress"?"지연":""}</small></span>
       <em className={`status ${status}`}>{statusLabels[status]||status}</em><ChevronRight size={18}/>
-    </button>})}
+    </button>})}{!rows.length&&<p className="wv2-master-empty">조건에 맞는 항목이 없습니다.</p>}
   </div>;
 }
