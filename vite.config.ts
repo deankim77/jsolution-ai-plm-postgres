@@ -50,7 +50,7 @@ export default defineConfig(async () => {
   return {
     server: {
       host: "0.0.0.0",
-      allowedHosts: ["terminal.local", "aipms.jjjsolution.com", "ai-pms.jjjsolution.com"],
+      allowedHosts: ["terminal.local", "aipms.jjjsolution.com", "ai-pms.jjjsolution.com", "pms.jsolution.io"],
       ...(isCodexSeatbeltSandbox
         ? { watch: { useFsEvents: false, usePolling: true } }
         : {}),

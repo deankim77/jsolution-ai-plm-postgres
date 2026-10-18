@@ -31,7 +31,7 @@ loadDevVars();
 export default defineConfig({
   server: {
     host: "0.0.0.0",
-    allowedHosts: ["terminal.local", "aipms.jjjsolution.com", "ai-pms.jjjsolution.com", "localhost"],
+    allowedHosts: ["terminal.local", "aipms.jjjsolution.com", "ai-pms.jjjsolution.com", "pms.jsolution.io", "localhost"],
   },
   ssr: {
     external: ["pg", "pg-native"],
