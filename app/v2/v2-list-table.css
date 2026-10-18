@@ -41,22 +41,6 @@
 .v2-list-table tbody tr.ai-selected { background: var(--v2-surface-subtle); }
 .v2-list-table tbody tr.ai-selected td:first-child { box-shadow: inset 3px 0 var(--v2-color-primary); }
 .v2-list-table button { font: inherit; cursor: pointer; }
-.v2-list-table .v2-list-header-filter {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  min-height: var(--v2-wbs-header-height);
-  max-width: 100%;
-  padding: 0;
-  border: 0;
-  background: transparent;
-  color: inherit;
-  font-size: var(--v2-font-size-table-header);
-  font-weight: inherit;
-}
-.v2-list-table .v2-list-header-filter.active { color: var(--v2-color-primary-dark); }
-.v2-list-header-filter svg { flex: none; }
-.v2-list-header-filter em { font-size: var(--v2-font-size-caption); font-style: normal; }
 .v2-list-table .v2-list-name,
 .v2-list-table .v2-list-open {
   display: flex;

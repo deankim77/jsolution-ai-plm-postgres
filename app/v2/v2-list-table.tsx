@@ -1,17 +1,16 @@
 "use client";
 
 import {useEffect,useRef,type ReactNode} from "react";
-import {Filter} from "lucide-react";
 import "./v2-list-table.css";
 
-export type V2ListColumn={key:string;label:string;header?:ReactNode;width:number;grow?:boolean;onFilter?:()=>void;activeCount?:number};
+export type V2ListColumn={key:string;label:string;header?:ReactNode;width:number;grow?:boolean;headerFilter?:ReactNode};
 
 export function V2ListTable({label,columns,children,empty,footer}:{label:string;columns:V2ListColumn[];children:ReactNode;empty?:ReactNode;footer?:ReactNode}){
   return <div className="v2-list-table-region" role="region" aria-label={label} tabIndex={0}>
     <table className="v2-list-table" style={{minWidth:columns.reduce((sum,column)=>sum+column.width,0)}}>
       <caption className="v2-list-sr-only">{label}</caption>
       <colgroup>{columns.map(column=><col key={column.key} style={column.grow?undefined:{width:column.width}}/>)}</colgroup>
-      <thead><tr>{columns.map(column=><th key={column.key} scope="col">{column.header??(column.onFilter?<button type="button" className={`v2-list-header-filter${column.activeCount?" active":""}`} aria-label={`${column.label} 필터${column.activeCount?` · ${column.activeCount}개 적용`:""}`} onClick={column.onFilter}><span>{column.label}</span><Filter size={18}/>{Boolean(column.activeCount)&&<em>{column.activeCount}</em>}</button>:column.label)}</th>)}</tr></thead>
+      <thead><tr>{columns.map(column=><th key={column.key} scope="col">{column.header??(column.headerFilter?<div className="v2-column-heading"><span>{column.label}</span>{column.headerFilter}</div>:column.label)}</th>)}</tr></thead>
       <tbody>{empty?<tr><td className="v2-list-empty" colSpan={columns.length}>{empty}</td></tr>:children}</tbody>
     </table>
     {footer}

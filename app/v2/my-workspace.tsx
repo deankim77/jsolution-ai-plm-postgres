@@ -3,8 +3,9 @@
 /* eslint-disable react-hooks/exhaustive-deps */
 import {useCallback,useEffect,useMemo,useRef,useState} from "react";
 import {AlertTriangle,Check,ChevronRight,Clock3,FileText,Filter,Search} from "lucide-react";
-import {FilterChipGroup,FilterDateRange,FilterSection,FilterSelect,FilterText,type WorkspaceFilterConfig} from "./workspace-filter-panel";
+import {FilterChipGroup,FilterMultiSuggest,FilterDateRange,FilterSection,FilterSelect,FilterText,type WorkspaceFilterConfig} from "./workspace-filter-panel";
 import {useAiContextSelection} from "./ai-context-selection";
+import {V2ColumnMultiFilter,V2ColumnDateFilter,type V2ColumnOption} from "./v2-column-filter";
 import {V2ListTable,V2ListSelectAll,V2ListProgress,type V2ListColumn} from "./v2-list-table";
 import {readMyWorkPageCache,readMyWorkSummaryCache,writeMyWorkPageCache,writeMyWorkSummaryCache} from "./my-work-data-store";
 
@@ -12,15 +13,14 @@ type Task={id:string;projectId:string;projectCode:string;projectName:string;wbsC
 type ProjectOption={id:string;code:string;name:string};
 export type MyWorkScope="all"|"review"|"today"|"active"|"delayed"|"deliverable"|"issue"|"workflow";
 type MyWorkSummary={total:number;active:number;today:number;delayed:number;review:number;deliverable:number;issue:number};
-type MyWorkResponse={tasks:Task[];projects:ProjectOption[];total:number;reviewCount:number;openCount:number;summary?:MyWorkSummary;hasMore:boolean;error?:string};
+type MyWorkResponse={roleOptions?:V2ColumnOption[];tasks:Task[];projects:ProjectOption[];total:number;reviewCount:number;openCount:number;summary?:MyWorkSummary;hasMore:boolean;error?:string};
 type MyWorkSummaryResponse={summary?:MyWorkSummary;error?:string};
-type MyWorkFilters={projectId:string;statuses:string[];actions:string[];deliverableStatuses:string[];issueTypes:string[];role:string;dueFrom:string;dueTo:string};
+type MyWorkFilters={projectIds:string[];roleQueries:string[];projectId:string;statuses:string[];actions:string[];deliverableStatuses:string[];issueTypes:string[];role:string;dueFrom:string;dueTo:string};
 
 const PAGE_SIZE=50;
-type MyWorkFilterColumn=""|"project"|"role"|"due"|"linked"|"deliverable"|"status";
 const statusLabel=(status:string)=>status==="completed"?"완료":status==="review"?"승인 대기":status==="active"?"진행 중":status==="hold"?"보류":"예정";
 const emptySummary:MyWorkSummary={total:0,active:0,today:0,delayed:0,review:0,deliverable:0,issue:0};
-const emptyMyWorkFilters:MyWorkFilters={projectId:"",statuses:[],actions:[],deliverableStatuses:[],issueTypes:[],role:"",dueFrom:"",dueTo:""};
+const emptyMyWorkFilters:MyWorkFilters={projectIds:[],roleQueries:[],projectId:"",statuses:[],actions:[],deliverableStatuses:[],issueTypes:[],role:"",dueFrom:"",dueTo:""};
 const issueTypesOf=(value:Partial<MyWorkFilters>)=>Array.isArray(value.issueTypes)?value.issueTypes:[];
 const deliverableStatusesOf=(value:Partial<MyWorkFilters>)=>Array.isArray(value.deliverableStatuses)?value.deliverableStatuses:[];
 
@@ -38,12 +38,12 @@ export function FilteredMyWorkWorkspace({scope,onScopeChange,onOpenTask,onOpenFi
   const [query,setQuery]=useState("");
   const [debouncedQuery,setDebouncedQuery]=useState("");
   const [filterOpen,setFilterOpen]=useState(false);
-  const [filterColumn,setFilterColumn]=useState<MyWorkFilterColumn>("");
   const [filters,setFilters]=useState<MyWorkFilters>(emptyMyWorkFilters);
   const [draftFilters,setDraftFilters]=useState<MyWorkFilters>(emptyMyWorkFilters);
   const [draftTotal,setDraftTotal]=useState(0);
   const [draftCounting,setDraftCounting]=useState(false);
   const [workflowCount,setWorkflowCount]=useState(0);
+  const [roleOptions,setRoleOptions]=useState<V2ColumnOption[]>([]);
   const moduleRef=useRef<HTMLElement|null>(null);
   const sentinelRef=useRef<HTMLDivElement|null>(null);
   const requestKeyRef=useRef("");
@@ -58,7 +58,8 @@ export function FilteredMyWorkWorkspace({scope,onScopeChange,onOpenTask,onOpenFi
   const buildParams=useCallback((value:MyWorkFilters,limit:number,offset:number)=>{
     const params=new URLSearchParams({limit:String(limit),offset:String(offset),scope,today,includeSummary:"0"});
     if(debouncedQuery)params.set("q",debouncedQuery);
-    if(value.projectId)params.set("projectId",value.projectId);
+    if(value.projectIds.length)params.set("projectIds",value.projectIds.join(","));else if(value.projectId)params.set("projectId",value.projectId);
+    if(value.roleQueries.length)params.set("roles",value.roleQueries.join(","));
     if(value.statuses.length)params.set("statuses",value.statuses.join(","));
     if(value.actions.length)params.set("actions",value.actions.join(","));
     const deliverableStatuses=deliverableStatusesOf(value);if(deliverableStatuses.length)params.set("deliverableStatuses",deliverableStatuses.join(","));
@@ -85,7 +86,7 @@ export function FilteredMyWorkWorkspace({scope,onScopeChange,onOpenTask,onOpenFi
     setLoadingMore(false);setError("");setMoreError("");
     if(cached){
       const data=cached.value;
-      setTasks(data.tasks??[]);setProjects(data.projects??[]);setTotal(Number(data.total||0));setHasMore(Boolean(data.hasMore));setLoading(false);
+      setTasks(data.tasks??[]);setProjects(data.projects??[]);setRoleOptions(data.roleOptions??[]);setTotal(Number(data.total||0));setHasMore(Boolean(data.hasMore));setLoading(false);
       if(cached.fresh)return()=>controller.abort();
     }else{
       setLoading(true);setTasks([]);
@@ -93,7 +94,7 @@ export function FilteredMyWorkWorkspace({scope,onScopeChange,onOpenTask,onOpenFi
     fetchPage(0,controller.signal).then(data=>{
       writeMyWorkPageCache(requestKey,data);
       console.info("[MY_WORK_CLIENT] before-setTasks",{at:Math.round(performance.now()-perfStartRef.current),count:(data.tasks??[]).length});
-      setTasks(data.tasks??[]);setProjects(data.projects??[]);setTotal(Number(data.total||0));setHasMore(Boolean(data.hasMore));
+      setTasks(data.tasks??[]);setProjects(data.projects??[]);setRoleOptions(data.roleOptions??[]);setTotal(Number(data.total||0));setHasMore(Boolean(data.hasMore));
       queueMicrotask(()=>console.info("[MY_WORK_CLIENT] after-setTasks-microtask",{at:Math.round(performance.now()-perfStartRef.current)}));
     }).catch(reason=>{if(!(reason instanceof DOMException&&reason.name==="AbortError"))setError(reason instanceof Error?reason.message:"MY WORK를 불러오지 못했습니다.")}).finally(()=>{if(!controller.signal.aborted)setLoading(false)});
     return()=>controller.abort();
@@ -152,13 +153,13 @@ export function FilteredMyWorkWorkspace({scope,onScopeChange,onOpenTask,onOpenFi
     },350);
     return()=>{window.clearTimeout(timer);controller.abort()};
   },[filterOpen,draftFilters,buildParams]);
-  const activeFilterCount=Number(Boolean(filters.projectId))+filters.statuses.length+filters.actions.length+deliverableStatusesOf(filters).length+issueTypesOf(filters).length+Number(Boolean(filters.role))+Number(Boolean(filters.dueFrom))+Number(Boolean(filters.dueTo));
+  const activeFilterCount=Number(Boolean(filters.projectId))+filters.projectIds.length+filters.roleQueries.length+filters.statuses.length+filters.actions.length+deliverableStatusesOf(filters).length+issueTypesOf(filters).length+Number(Boolean(filters.role))+Number(Boolean(filters.dueFrom))+Number(Boolean(filters.dueTo));
   const contextFor=(task:Task)=>({id:task.id,kind:"WBS",title:`${task.wbsCode} ${task.name}`,meta:`${task.projectCode} ${task.projectName} · ${statusLabel(task.status)} · 마감 ${task.plannedEnd||"미정"}`});
   const toggleDraftStatus=(status:string)=>{setDraftCounting(true);setDraftFilters(current=>({...current,statuses:current.statuses.includes(status)?current.statuses.filter(item=>item!==status):[...current.statuses,status]}))};
   const toggleDraftAction=(action:string)=>{setDraftCounting(true);setDraftFilters(current=>({...current,actions:current.actions.includes(action)?current.actions.filter(item=>item!==action):[...current.actions,action]}))};
   const toggleDraftDeliverableStatus=(status:string)=>{setDraftCounting(true);setDraftFilters(current=>status==="all"?{...current,deliverableStatuses:[]}:{...current,deliverableStatuses:deliverableStatusesOf(current).includes(status)?deliverableStatusesOf(current).filter(item=>item!==status):[...deliverableStatusesOf(current),status]})};
   const toggleDraftIssueType=(issueType:string)=>{setDraftCounting(true);setDraftFilters(current=>issueType==="all"?{...current,issueTypes:[]}:{...current,issueTypes:issueTypesOf(current).includes(issueType)?issueTypesOf(current).filter(item=>item!==issueType):[...issueTypesOf(current),issueType]})};
-  const draftActiveCount=draftFilters.statuses.length+draftFilters.actions.length+deliverableStatusesOf(draftFilters).length+issueTypesOf(draftFilters).length+Number(Boolean(draftFilters.projectId))+Number(Boolean(draftFilters.role))+Number(Boolean(draftFilters.dueFrom))+Number(Boolean(draftFilters.dueTo));
+  const draftActiveCount=draftFilters.projectIds.length+draftFilters.roleQueries.length+draftFilters.statuses.length+draftFilters.actions.length+deliverableStatusesOf(draftFilters).length+issueTypesOf(draftFilters).length+Number(Boolean(draftFilters.projectId))+Number(Boolean(draftFilters.role))+Number(Boolean(draftFilters.dueFrom))+Number(Boolean(draftFilters.dueTo));
   const hubCards=([
     {key:"all",label:"처리할 업무",count:summary.total,description:"완료 제외",icon:<Check size={18}/>},
     {key:"active",label:"정상 진행",count:summary.active,description:"일정 내 진행",icon:<Clock3 size={18}/>},
@@ -170,40 +171,29 @@ export function FilteredMyWorkWorkspace({scope,onScopeChange,onOpenTask,onOpenFi
     {key:"workflow",label:"워크플로우",count:workflowCount,description:"승인·검토·합의·처리",icon:<Check size={18}/>},
   ] as const);
 
-  useEffect(()=>{if(!filterOpen)return;const show=(field:MyWorkFilterColumn)=>!filterColumn||filterColumn===field;onOpenFilter({eyebrow:"MY WORK FILTER",title:filterColumn?"내 업무 열 필터":"내 업무 상세 필터",description:"프로젝트, 처리 유형, 산출물 상태, 이슈 구분, 업무 상태와 마감 기간을 조합합니다.",resultCount:draftTotal,resultLoading:draftCounting,activeCount:draftActiveCount,onCancel:()=>setFilterOpen(false),onApply:()=>{if(draftCounting)return;setFilters({...draftFilters,statuses:[...draftFilters.statuses],actions:[...draftFilters.actions],deliverableStatuses:[...deliverableStatusesOf(draftFilters)],issueTypes:[...issueTypesOf(draftFilters)]});setFilterOpen(false)},onReset:()=>{setDraftCounting(true);setDraftFilters(current=>resetMyWorkColumn(current,filterColumn))},content:<>{show("project")&&<FilterSelect label="프로젝트" value={draftFilters.projectId} allLabel="전체 프로젝트" options={projects.map(item=>({value:item.id,label:`${item.code} · ${item.name}`}))} onChange={value=>{setDraftCounting(true);setDraftFilters(current=>({...current,projectId:value}))}}/>}{show("linked")&&<FilterSection title="처리 유형"><FilterChipGroup options={[["task","담당 Task"],["review","완료 승인"],["deliverable","산출물 처리"],["issue","이슈·리스크·협업"]].map(([value,label])=>({value,label}))} selected={draftFilters.actions} onToggle={toggleDraftAction}/></FilterSection>}{show("deliverable")&&<FilterSection title="산출물 상태"><FilterChipGroup options={[["all","전체"],["pending","등록 예정"],["registered","등록 완료"]].map(([value,label])=>({value,label}))} selected={deliverableStatusesOf(draftFilters).length?deliverableStatusesOf(draftFilters):["all"]} onToggle={toggleDraftDeliverableStatus}/></FilterSection>}{show("linked")&&<FilterSection title="이슈 · 리스크 · 협업"><FilterChipGroup options={[["all","전체"],["issue","이슈"],["risk","리스크"],["collaboration","협업"]].map(([value,label])=>({value,label}))} selected={issueTypesOf(draftFilters).length?issueTypesOf(draftFilters):["all"]} onToggle={toggleDraftIssueType}/></FilterSection>}{show("status")&&<FilterSection title="업무 상태"><FilterChipGroup options={[["planned","예정"],["active","진행 중"],["review","승인 대기"],["hold","보류"],["completed","완료"]].map(([value,label])=>({value,label}))} selected={draftFilters.statuses} onToggle={toggleDraftStatus}/></FilterSection>}{show("role")&&<FilterText label="Role · 담당" value={draftFilters.role} placeholder="Role 또는 담당자 검색" onChange={value=>{setDraftCounting(true);setDraftFilters(current=>({...current,role:value}))}}/>}{show("due")&&<FilterDateRange label="마감 기간" from={draftFilters.dueFrom} to={draftFilters.dueTo} onFrom={value=>{setDraftCounting(true);setDraftFilters(current=>({...current,dueFrom:value}))}} onTo={value=>{setDraftCounting(true);setDraftFilters(current=>({...current,dueTo:value}))}}/>}</>})},[filterOpen,filterColumn,draftFilters,draftTotal,draftCounting,projects,onOpenFilter]);
+  useEffect(()=>{if(!filterOpen)return;onOpenFilter({eyebrow:"MY WORK FILTER",title:"내 업무 상세 필터",description:"프로젝트, 처리 유형, 산출물 상태, 이슈 구분, 업무 상태와 마감 기간을 조합합니다.",resultCount:draftTotal,resultLoading:draftCounting,activeCount:draftActiveCount,onCancel:()=>setFilterOpen(false),onApply:()=>{if(draftCounting)return;setFilters({...draftFilters,statuses:[...draftFilters.statuses],actions:[...draftFilters.actions],deliverableStatuses:[...deliverableStatusesOf(draftFilters)],issueTypes:[...issueTypesOf(draftFilters)]});setFilterOpen(false)},onReset:()=>{setDraftCounting(true);setDraftFilters({...emptyMyWorkFilters,projectIds:[],roleQueries:[],statuses:[],actions:[],deliverableStatuses:[],issueTypes:[]})},content:<>{<FilterMultiSuggest label="프로젝트" selected={draftFilters.projectIds.length?draftFilters.projectIds:draftFilters.projectId?[draftFilters.projectId]:[]} placeholder="프로젝트 검색 · 여러 개 선택" options={projects.map(item=>({value:item.id,label:`${item.code} · ${item.name}`}))} onChange={values=>{setDraftCounting(true);setDraftFilters(current=>({...current,projectIds:values,projectId:""}))}}/>}{<FilterSection title="처리 유형"><FilterChipGroup options={[["task","담당 Task"],["review","완료 승인"],["deliverable","산출물 처리"],["issue","이슈·리스크·협업"]].map(([value,label])=>({value,label}))} selected={draftFilters.actions} onToggle={toggleDraftAction}/></FilterSection>}{<FilterSection title="산출물 상태"><FilterChipGroup options={[["all","전체"],["pending","등록 예정"],["registered","등록 완료"]].map(([value,label])=>({value,label}))} selected={deliverableStatusesOf(draftFilters).length?deliverableStatusesOf(draftFilters):["all"]} onToggle={toggleDraftDeliverableStatus}/></FilterSection>}{<FilterSection title="이슈 · 리스크 · 협업"><FilterChipGroup options={[["all","전체"],["issue","이슈"],["risk","리스크"],["collaboration","협업"]].map(([value,label])=>({value,label}))} selected={issueTypesOf(draftFilters).length?issueTypesOf(draftFilters):["all"]} onToggle={toggleDraftIssueType}/></FilterSection>}{<FilterSection title="업무 상태"><FilterChipGroup options={[["planned","예정"],["active","진행 중"],["review","승인 대기"],["hold","보류"],["completed","완료"]].map(([value,label])=>({value,label}))} selected={draftFilters.statuses} onToggle={toggleDraftStatus}/></FilterSection>}{<><FilterMultiSuggest label="Role · 담당 선택" selected={draftFilters.roleQueries} placeholder="Role · 담당 검색 · 여러 개 선택" options={roleOptions} onChange={values=>{setDraftCounting(true);setDraftFilters(current=>({...current,roleQueries:values,role:""}))}}/><FilterText label="Role · 담당" value={draftFilters.role} placeholder="Role 또는 담당자 검색" onChange={value=>{setDraftCounting(true);setDraftFilters(current=>({...current,role:value}))}}/></>}{<FilterDateRange label="마감 기간" from={draftFilters.dueFrom} to={draftFilters.dueTo} onFrom={value=>{setDraftCounting(true);setDraftFilters(current=>({...current,dueFrom:value}))}} onTo={value=>{setDraftCounting(true);setDraftFilters(current=>({...current,dueTo:value}))}}/>}</>})},[filterOpen,draftFilters,draftTotal,draftCounting,projects,roleOptions,onOpenFilter]);
 
-  const resetMyWorkColumn=(current:MyWorkFilters,column:MyWorkFilterColumn):MyWorkFilters=>{
-    switch(column){
-      case "project":return {...current,projectId:""};
-      case "role":return {...current,role:""};
-      case "due":return {...current,dueFrom:"",dueTo:""};
-      case "linked":return {...current,actions:[],issueTypes:[]};
-      case "deliverable":return {...current,deliverableStatuses:[]};
-      case "status":return {...current,statuses:[]};
-      default:return {...emptyMyWorkFilters,statuses:[],actions:[],deliverableStatuses:[],issueTypes:[]};
-    }
-  };
-  const openFilters=(column:MyWorkFilterColumn="")=>{
+  const openFilters=()=>{
     setDraftFilters({...filters,statuses:[...filters.statuses],actions:[...filters.actions],deliverableStatuses:[...deliverableStatusesOf(filters)],issueTypes:[...issueTypesOf(filters)]});
-    setDraftTotal(total);setDraftCounting(false);setFilterColumn(column);setFilterOpen(true);
+    setDraftTotal(total);setDraftCounting(false);setFilterOpen(true);
   };
   const allSelected=tasks.length>0&&tasks.every(task=>selection.has(contextFor(task)));
   const toggleVisible=()=>tasks.forEach(task=>{const context=contextFor(task);if(allSelected?selection.has(context):!selection.has(context))selection.toggle(context)});
   const listColumns:V2ListColumn[]=[
     {key:"select",label:"AI 선택",width:36,header:<V2ListSelectAll label="표시된 내 업무 전체 AI 선택" checked={allSelected} mixed={!allSelected&&tasks.some(task=>selection.has(contextFor(task)))} onChange={toggleVisible} disabled={loading}/>},
-    {key:"project",label:"프로젝트",width:200,onFilter:()=>openFilters("project"),activeCount:Number(Boolean(filters.projectId))},
+    {key:"project",label:"프로젝트",width:200,headerFilter:<V2ColumnMultiFilter label="프로젝트" options={projects.map(item=>({value:item.id,label:item.name}))} selected={filters.projectIds.length?filters.projectIds:filters.projectId?[filters.projectId]:[]} onApply={values=>setFilters(current=>({...current,projectIds:values,projectId:""}))}/>},
     {key:"task",label:"WBS · 업무",width:260,grow:true},
-    {key:"role",label:"Role · 담당",width:120,onFilter:()=>openFilters("role"),activeCount:Number(Boolean(filters.role))},
-    {key:"due",label:"마감",width:116,onFilter:()=>openFilters("due"),activeCount:Number(Boolean(filters.dueFrom))+Number(Boolean(filters.dueTo))},
-    {key:"linked",label:"연결 항목",width:116,onFilter:()=>openFilters("linked"),activeCount:filters.actions.length+issueTypesOf(filters).length},
-    {key:"deliverable",label:"산출물 상태",width:128,onFilter:()=>openFilters("deliverable"),activeCount:deliverableStatusesOf(filters).length},
+    {key:"role",label:"Role · 담당",width:120,headerFilter:<V2ColumnMultiFilter label="Role · 담당" options={roleOptions} selected={filters.roleQueries.length?filters.roleQueries:filters.role?[filters.role]:[]} onApply={values=>setFilters(current=>({...current,roleQueries:values,role:""}))}/>},
+    {key:"due",label:"마감",width:116,headerFilter:<V2ColumnDateFilter label="마감" from={filters.dueFrom} to={filters.dueTo} onApply={(dueFrom,dueTo)=>setFilters(current=>({...current,dueFrom,dueTo}))}/>},
+    {key:"linked",label:"처리 유형",width:116,headerFilter:<V2ColumnMultiFilter label="처리 유형" options={[{value:"task",label:"담당 Task"},{value:"review",label:"완료 승인"},{value:"deliverable",label:"산출물 처리"},{value:"issue",label:"이슈·협업"}]} selected={filters.actions} onApply={values=>setFilters(current=>({...current,actions:values}))}/>},
+    {key:"deliverable",label:"산출물 상태",width:128,headerFilter:<V2ColumnMultiFilter label="산출물 상태" options={[{value:"pending",label:"등록 예정"},{value:"registered",label:"등록 완료"}]} selected={deliverableStatusesOf(filters)} onApply={values=>setFilters(current=>({...current,deliverableStatuses:values}))}/>},
     {key:"progress",label:"진척률",width:104},
-    {key:"status",label:"상태",width:112,onFilter:()=>openFilters("status"),activeCount:filters.statuses.length},
+    {key:"status",label:"상태",width:112,headerFilter:<V2ColumnMultiFilter label="상태" options={[["planned","예정"],["active","진행 중"],["review","승인 대기"],["hold","보류"],["completed","완료"]].map(([value,label])=>({value,label}))} selected={filters.statuses} onApply={values=>setFilters(current=>({...current,statuses:values}))}/>},
     {key:"open",label:"열기",width:40},
   ];
   const openTask=(task:Task)=>onOpenTask(task.projectId,task.id,scope==="deliverable"||deliverableStatusesOf(filters).length>0?"deliverable":scope==="issue"||issueTypesOf(filters).length>0?"issue":"actual");
 
-  return <section ref={moduleRef} className="wv2-module wv2-mywork-workspace" onScroll={event=>{const node=event.currentTarget;if(node.scrollHeight-node.scrollTop-node.clientHeight<420)void loadMore()}}><header className="wv2-module-head"><div className="wv2-module-head-main"><small>MY WORK</small><div className="wv2-module-title-row"><h1>내 업무</h1><p>많은 업무도 처리 유형별로 빠르게 찾아 바로 실행합니다.</p></div></div></header><div className="wv2-mywork-hub">{hubCards.map(card=><button key={card.key} className={`${scope===card.key?"active":""} ${card.key==="delayed"&&card.count?"risk":""}`} onClick={()=>onScopeChange(card.key)}><i>{card.icon}</i><span><small>{card.label}</small><b>{card.count}</b><em>{card.description}</em></span></button>)}</div><div className="wv2-module-toolbar"><label><Search size={18}/><input value={query} onChange={event=>setQuery(event.target.value)} placeholder="프로젝트·WBS·업무·산출물·이슈·Role 검색"/></label><button className={activeFilterCount?"active":""} onClick={()=>openFilters()}><Filter size={18}/>상세 필터{activeFilterCount>0&&<em>{activeFilterCount}</em>}</button><select className="wv2-mywork-project-filter" aria-label="프로젝트" value={filters.projectId} onChange={event=>{const projectId=event.target.value;setFilters(current=>({...current,projectId}));setDraftFilters(current=>({...current,projectId}))}}><option value="">전체 프로젝트</option>{projects.map(item=><option key={item.id} value={item.id}>{item.code} · {item.name}</option>)}</select>{scope!=="all"&&<button className="wv2-mywork-scope-clear" onClick={()=>onScopeChange("all")}>유형 필터 해제 ×</button>}<span>{total}개 업무</span></div><V2ListTable label="내 업무 목록" columns={listColumns} empty={loading?"내 업무를 불러오는 중…":error||(!tasks.length?"조건에 맞는 업무가 없습니다.":undefined)} footer={!loading&&!error&&tasks.length>0?<div ref={sentinelRef} className="wv2-mywork-sentinel">{loadingMore?<><Clock3 size={18}/><span>업무를 더 불러오는 중…</span></>:moreError?<><AlertTriangle size={18}/><span>{moreError}</span><button onClick={()=>void loadMore()}>다시 시도</button></>:hasMore?<><span>{tasks.length} / {total}개 표시</span><button onClick={()=>void loadMore()}>다음 50개 불러오기</button></>:total>PAGE_SIZE?<><Check size={18}/><span>전체 {total}개를 불러왔습니다.</span></>:null}</div>:undefined}>
+  return <section ref={moduleRef} className="wv2-module wv2-mywork-workspace" onScroll={event=>{const node=event.currentTarget;if(node.scrollHeight-node.scrollTop-node.clientHeight<420)void loadMore()}}><header className="wv2-module-head"><div className="wv2-module-head-main"><small>MY WORK</small><div className="wv2-module-title-row"><h1>내 업무</h1><p>많은 업무도 처리 유형별로 빠르게 찾아 바로 실행합니다.</p></div></div></header><div className="wv2-mywork-hub">{hubCards.map(card=><button key={card.key} className={`${scope===card.key?"active":""} ${card.key==="delayed"&&card.count?"risk":""}`} onClick={()=>onScopeChange(card.key)}><i>{card.icon}</i><span><small>{card.label}</small><b>{card.count}</b><em>{card.description}</em></span></button>)}</div><div className="wv2-module-toolbar"><label><Search size={18}/><input value={query} onChange={event=>setQuery(event.target.value)} placeholder="프로젝트·WBS·업무·산출물·이슈·Role 검색"/></label><button className={activeFilterCount?"active":""} onClick={()=>openFilters()}><Filter size={18}/>상세 필터{activeFilterCount>0&&<em>{activeFilterCount}</em>}</button><select className="wv2-mywork-project-filter" aria-label="프로젝트" value={filters.projectIds.length>1?"__multiple":filters.projectIds[0]||filters.projectId} onChange={event=>{const projectId=event.target.value;if(projectId==="__multiple")return;setFilters(current=>({...current,projectId,projectIds:[]}));setDraftFilters(current=>({...current,projectId,projectIds:[]}))}}><option value="">전체 프로젝트</option>{filters.projectIds.length>1&&<option value="__multiple">{filters.projectIds.length}개 선택</option>}{projects.map(item=><option key={item.id} value={item.id}>{item.code} · {item.name}</option>)}</select>{scope!=="all"&&<button className="wv2-mywork-scope-clear" onClick={()=>onScopeChange("all")}>유형 필터 해제 ×</button>}<span>{total}개 업무</span></div><V2ListTable label="내 업무 목록" columns={listColumns} empty={loading?"내 업무를 불러오는 중…":error||(!tasks.length?"조건에 맞는 업무가 없습니다.":undefined)} footer={!loading&&!error&&tasks.length>0?<div ref={sentinelRef} className="wv2-mywork-sentinel">{loadingMore?<><Clock3 size={18}/><span>업무를 더 불러오는 중…</span></>:moreError?<><AlertTriangle size={18}/><span>{moreError}</span><button onClick={()=>void loadMore()}>다시 시도</button></>:hasMore?<><span>{tasks.length} / {total}개 표시</span><button onClick={()=>void loadMore()}>다음 50개 불러오기</button></>:total>PAGE_SIZE?<><Check size={18}/><span>전체 {total}개를 불러왔습니다.</span></>:null}</div>:undefined}>
       {!loading&&!error&&tasks.map(task=>{const checked=selection.has(contextFor(task));return <tr key={task.id} data-clickable="true" className={checked?"ai-selected":""} onClick={()=>openTask(task)}>
         <td onClick={event=>event.stopPropagation()}><input type="checkbox" aria-label={task.name+" AI 선택"} checked={checked} onChange={()=>selection.toggle(contextFor(task))}/></td>
         <td><button type="button" className="v2-list-name" onClick={event=>{event.stopPropagation();openTask(task)}} title={task.projectName}><b>{task.projectName}</b><small>{task.projectCode}</small></button></td>

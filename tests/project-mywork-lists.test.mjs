@@ -13,6 +13,7 @@ function compiled(path,imports={}){
 }
 const shared=compiled("app/v2/v2-list-table.tsx");
 const filters=compiled("app/v2/workspace-filter-panel.tsx");
+const columnFilters=compiled("app/v2/v2-column-filter.tsx");
 function checkColumns(html,count){
   assert.equal((html.match(/<th scope="col"/g)||[]).length,count);
   assert.equal((html.match(/<col(?: |\/)/g)||[]).length,count);
@@ -22,7 +23,7 @@ function checkColumns(html,count){
 const projects=[{id:"a",code:"INS-CARE",name:"간병인 보험상품 개발",projectTypeName:"신규 보험상품 개발",partnerName:"보험사",pmNames:["Dean"],startDate:"2026-10-08",endDate:"2026-12-01",status:"active"}];
 test("프로젝트는 공통 표의 11개 헤더와 본문 열이 일치하고 긴 이름은 원문을 유지한다",()=>{
   const {ProjectListWorkspace}=compiled("app/v2/project-workspaces.tsx",{
-    "./v2-list-table":shared,"./workspace-filter-panel":filters,"./template-output-editor":{},
+    "./v2-list-table":shared,"./v2-column-filter":columnFilters,"./workspace-filter-panel":filters,"./template-output-editor":{},
     "./ai-context-selection":{useAiContextSelection:()=>selection},
     "./dashboard-data-store":{useSharedDashboard:()=>({projects:[{id:"a",progress:56,taskCount:30,completedCount:13,delayedCount:2,openIssues:1,gateSummary:{currentGate:"G4"}}]})},
   });
@@ -37,7 +38,7 @@ test("내 업무는 공통 표의 10개 헤더·본문을 유지하고 완료 �
   let index=0;
   const {FilteredMyWorkWorkspace}=compiled("app/v2/my-workspace.tsx",{
     react:{...React,useState:value=>React.useState(index++===0?tasks:index===2?projects:index===3?false:value)},
-    "./v2-list-table":shared,"./workspace-filter-panel":filters,
+    "./v2-list-table":shared,"./v2-column-filter":columnFilters,"./workspace-filter-panel":filters,
     "./ai-context-selection":{useAiContextSelection:()=>selection},"./my-work-data-store":{},
   });
   const html=SSR.renderToStaticMarkup(React.createElement(FilteredMyWorkWorkspace,{scope:"review",onScopeChange:()=>{},onOpenTask:()=>{},onOpenFilter:()=>{}}));
@@ -45,6 +46,7 @@ test("내 업무는 공통 표의 10개 헤더·본문을 유지하고 완료 �
 });
 
 test("빈 결과에서도 공통 헤더와 열 필터가 남아 조건을 해제할 수 있다",()=>{
-  const html=SSR.renderToStaticMarkup(React.createElement(shared.V2ListTable,{label:"빈 목록",columns:[{key:"name",label:"이름",width:200,grow:true},{key:"status",label:"상태",width:100,onFilter:()=>{},activeCount:2}],empty:"일치하는 항목 없음"}));
-  assert.match(html,/상태 필터 · 2개 적용/);assert.match(html,/colSpan="2"|colspan="2"/);assert.match(html,/일치하는 항목 없음/);
+  const headerFilter=React.createElement(columnFilters.V2ColumnMultiFilter,{label:"상태",options:[{value:"active",label:"진행 중"},{value:"hold",label:"중단"}],selected:["active","hold"],onApply:()=>{}});
+  const html=SSR.renderToStaticMarkup(React.createElement(shared.V2ListTable,{label:"빈 목록",columns:[{key:"name",label:"이름",width:200,grow:true},{key:"status",label:"상태",width:100,headerFilter}],empty:"일치하는 항목 없음"}));
+  assert.match(html,/2개 선택/);assert.match(html,/colSpan="2"|colspan="2"/);assert.match(html,/일치하는 항목 없음/);
 });

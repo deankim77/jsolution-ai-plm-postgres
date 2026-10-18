@@ -1,3 +1,4 @@
+import {parseMyWorkMultiFilters,getMyWorkRoleOptions} from "../../../services/my-work-filter-service";
 import { getLegacyDbCompat } from "../../../db/postgres-d1-compat";
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { getChatGPTUser } from "../../chatgpt-auth";
@@ -29,6 +30,7 @@ export async function GET(request:Request){
   const query=(url.searchParams.get("q")||"").trim().toLowerCase();
   const scope=url.searchParams.get("scope")||"all";
   const projectId=url.searchParams.get("projectId")||"";
+  const multiFilters=parseMyWorkMultiFilters(url.searchParams);
   const statuses=(url.searchParams.get("statuses")||"").split(",").map(value=>value.trim()).filter(Boolean);
   const role=(url.searchParams.get("role")||"").trim().toLowerCase();
   const actions=(url.searchParams.get("actions")||"").split(",").map(value=>value.trim()).filter(Boolean);
@@ -91,8 +93,10 @@ export async function GET(request:Request){
     OR EXISTS (SELECT 1 FROM deliverables sd WHERE sd.task_id=wt.id AND LOWER(COALESCE(sd.name,'')) LIKE ?)
     OR EXISTS (SELECT 1 FROM project_issues si WHERE si.task_id=wt.id AND LOWER(COALESCE(si.title,'') || ' ' || COALESCE(si.description,'')) LIKE ?)
   )`,keyword,keyword,keyword)}
-  if(projectId)addCommon("wt.project_id=?",projectId);
+  if(multiFilters.projectIds.length)addCommon(`wt.project_id IN (${multiFilters.projectIds.map(()=>"?").join(",")})`,...multiFilters.projectIds);
+  else if(projectId)addCommon("wt.project_id=?",projectId);
   if(statuses.length)addCommon(`wt.status IN (${statuses.map(()=>"?").join(",")})`,...statuses);
+  if(multiFilters.roles.length)addCommon(`(LOWER(COALESCE(wt.role_code,'')) IN (${multiFilters.roles.map(()=>"?").join(",")}) OR LOWER(COALESCE(u.name,'')) IN (${multiFilters.roles.map(()=>"?").join(",")}))`,...multiFilters.roles,...multiFilters.roles);
   if(role)addCommon("LOWER(COALESCE(wt.role_code,'') || ' ' || COALESCE(u.name,'')) LIKE ?",`%${role}%`);
   if(dueFrom)addCommon("wt.planned_end>=?",dueFrom);
   if(dueTo)addCommon("wt.planned_end<=?",dueTo);
@@ -229,11 +233,12 @@ export async function GET(request:Request){
      ORDER BY p.name
   `).bind(...baseValues);
 
-  const [taskResult,countResult,summaryResult,projectResult]=await Promise.all([
+  const [taskResult,countResult,summaryResult,projectResult,roleOptions]=await Promise.all([
     taskStatement.all(),
     countStatement.first<SummaryRow>(),
     includeSummary?summaryStatement.first<SummaryRow>():Promise.resolve(null),
     projectsStatement.all<ProjectOption>(),
+    offset===0?getMyWorkRoleOptions(context.companyId,user.id):Promise.resolve(undefined),
   ]);
   const total=Number(countResult?.total||0);
 
@@ -241,6 +246,7 @@ export async function GET(request:Request){
     user:{id:user.id,email:user.email,name:user.name},
     tasks:taskResult.results,
     projects:projectResult.results,
+    roleOptions,
     total,
     reviewCount:Number(summaryResult?.reviewCount||0),
     openCount:Number(summaryResult?.openCount||0),

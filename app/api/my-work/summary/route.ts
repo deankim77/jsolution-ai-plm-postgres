@@ -1,3 +1,4 @@
+import {parseMyWorkMultiFilters} from "../../../../services/my-work-filter-service";
 import { getLegacyDbCompat } from "../../../../db/postgres-d1-compat";
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import {getChatGPTUser} from "../../../chatgpt-auth";
@@ -17,6 +18,7 @@ export async function GET(request:Request){
   const url=new URL(request.url);
   const query=(url.searchParams.get("q")||"").trim().toLowerCase();
   const projectId=url.searchParams.get("projectId")||"";
+  const multiFilters=parseMyWorkMultiFilters(url.searchParams);
   const statuses=(url.searchParams.get("statuses")||"").split(",").map(value=>value.trim()).filter(Boolean);
   const role=(url.searchParams.get("role")||"").trim().toLowerCase();
   const dueFrom=url.searchParams.get("dueFrom")||"";
@@ -62,8 +64,10 @@ export async function GET(request:Request){
     OR EXISTS (SELECT 1 FROM deliverables sd WHERE sd.task_id=wt.id AND LOWER(COALESCE(sd.name,'')) LIKE ?)
     OR EXISTS (SELECT 1 FROM project_issues si WHERE si.task_id=wt.id AND LOWER(COALESCE(si.title,'') || ' ' || COALESCE(si.description,'')) LIKE ?)
   )`,keyword,keyword,keyword)}
-  if(projectId)add("wt.project_id=?",projectId);
+  if(multiFilters.projectIds.length)add(`wt.project_id IN (${multiFilters.projectIds.map(()=>"?").join(",")})`,...multiFilters.projectIds);
+  else if(projectId)add("wt.project_id=?",projectId);
   if(statuses.length)add(`wt.status IN (${statuses.map(()=>"?").join(",")})`,...statuses);
+  if(multiFilters.roles.length)add(`(LOWER(COALESCE(wt.role_code,'')) IN (${multiFilters.roles.map(()=>"?").join(",")}) OR LOWER(COALESCE(u.name,'')) IN (${multiFilters.roles.map(()=>"?").join(",")}))`,...multiFilters.roles,...multiFilters.roles);
   if(role)add("LOWER(COALESCE(wt.role_code,'') || ' ' || COALESCE(u.name,'')) LIKE ?",`%${role}%`);
   if(dueFrom)add("wt.planned_end>=?",dueFrom);
   if(dueTo)add("wt.planned_end<=?",dueTo);
