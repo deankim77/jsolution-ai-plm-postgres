@@ -1,3 +1,4 @@
+import {projectMasterRevision} from "../../../lib/project-master-cache";
 import { getLegacyDbCompat } from "../../../db/postgres-d1-compat";
 import { ensureProjectDataFoundation, type RuntimeD1 } from "../../../db/project-data-foundation";
 import {canManageProject,contextErrorResponse,requireProjectAccess,resolveRequestContext} from "../../../db/request-context";
@@ -20,7 +21,7 @@ type ProjectInput = {
   members?: Array<{ userId: string; projectRole: string }>;
 };
 type TemplateDefinition={roles?:string[];wbs?:Array<{id?:string;parentId?:string;level?:number;kind?:string;name?:string;taskType?:string;durationDays?:number;predecessor?:string;role?:string;completionActor?:string;completionCriteria?:string;deliverable?:string;deliverableCategory?:string;deliverableRequired?:boolean;deliverableDocumentKind?:"document"|"drawing";deliverables?:Array<{name:string;type?:string;required?:boolean;documentKind?:"document"|"drawing"}>}>};
-type ProjectListCache={expiresAt:number;data:{projects:unknown[]}};
+type ProjectListCache={revision:number;expiresAt:number;data:{projects:unknown[]}};
 
 // D1 statements are supplied by the Cloudflare runtime and intentionally kept opaque here.
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -44,7 +45,7 @@ async function nextProjectCode(db:D1,companyId:string){
 }
 async function readProjects(db:D1,companyId:string){
   const result = await db.prepare(
-    `SELECT p.id, p.code, p.name, p.customer_name AS customerName,p.partner_id AS partnerId,p.project_type_id AS projectTypeId,partner.name AS partnerName,pt.name AS projectTypeName,profile.description,profile.reference_code AS referenceCode,profile.visibility,
+    `SELECT p.id, p.code, p.name, COALESCE(partner.name,p.customer_name) AS customerName,p.partner_id AS partnerId,p.project_type_id AS projectTypeId,partner.name AS partnerName,pt.name AS projectTypeName,profile.description,profile.reference_code AS referenceCode,profile.visibility,
             p.start_date AS startDate, p.end_date AS endDate, p.status,p.updated_at AS updatedAt,
             tv.version AS templateVersion,
             COALESCE(t.name, json_extract(p.template_snapshot, '$.templateName'), '연결 정보 확인 필요') AS templateName,
@@ -55,7 +56,7 @@ async function readProjects(db:D1,companyId:string){
        FROM projects p
        LEFT JOIN template_versions tv ON tv.id = p.template_version_id
        LEFT JOIN templates t ON t.id = tv.template_id
-       LEFT JOIN partners partner ON partner.id=p.partner_id
+       LEFT JOIN partners partner ON partner.id=p.partner_id AND partner.company_id=p.company_id
        LEFT JOIN project_types pt ON pt.id=p.project_type_id
        LEFT JOIN project_profiles profile ON profile.project_id=p.id
       WHERE p.company_id = ? AND p.code <> ?
@@ -72,11 +73,12 @@ export async function GET(request:Request) {
   let context;try{context=await resolveRequestContext(request,db)}catch(reason){return contextErrorResponse(reason)??Response.json({error:"사용자 정보를 확인하지 못했습니다."},{status:500})}
   const url=new URL(request.url);
   if(url.searchParams.get("action")==="next-code")return Response.json({code:await nextProjectCode(db,context.companyId)});
+  const revision=projectMasterRevision(context.companyId),inflightKey=`${context.companyId}:${revision}`;
   const cached=projectListCache.get(context.companyId),now=Date.now();
-  if(cached&&cached.expiresAt>now)return Response.json(cached.data,{headers:{"x-project-list-cache":"hit"}});
-  const existing=projectListInflight.get(context.companyId);if(existing){const data=await existing;return Response.json(data,{headers:{"x-project-list-cache":"shared"}})}
-  const build=readProjects(db,context.companyId);projectListInflight.set(context.companyId,build);
-  try{const data=await build;projectListCache.set(context.companyId,{expiresAt:Date.now()+PROJECT_LIST_CACHE_MS,data});return Response.json(data,{headers:{"x-project-list-cache":"miss"}})}finally{if(projectListInflight.get(context.companyId)===build)projectListInflight.delete(context.companyId)}
+  if(cached&&cached.revision===revision&&cached.expiresAt>now)return Response.json(cached.data,{headers:{"x-project-list-cache":"hit"}});
+  const existing=projectListInflight.get(inflightKey);if(existing){const data=await existing;return Response.json(data,{headers:{"x-project-list-cache":"shared"}})}
+  const build=readProjects(db,context.companyId);projectListInflight.set(inflightKey,build);
+  try{const data=await build;projectListCache.set(context.companyId,{revision,expiresAt:Date.now()+PROJECT_LIST_CACHE_MS,data});return Response.json(data,{headers:{"x-project-list-cache":"miss"}})}finally{if(projectListInflight.get(inflightKey)===build)projectListInflight.delete(inflightKey)}
 }
 
 export async function POST(request: Request) {
@@ -189,7 +191,7 @@ export async function PATCH(request:Request) {
     const stored=await db.prepare("SELECT code,status FROM projects WHERE id=? AND company_id=?").bind(input.id,context.companyId).first<{code:string;status:string}>();
     const partner=input.partnerId?await db.prepare("SELECT name FROM partners WHERE id=? AND company_id=?").bind(input.partnerId,context.companyId).first<{name:string}>():null;
     const projectType=input.projectTypeId?await db.prepare("SELECT name FROM project_types WHERE id=? AND company_id=?").bind(input.projectTypeId,context.companyId).first<{name:string}>():null;
-    return Response.json({project:{id:input.id,code:stored?.code||"",name:input.name.trim(),customerName:input.customerName?.trim()||undefined,partnerId:input.partnerId,partnerName:partner?.name,projectTypeId:input.projectTypeId,projectTypeName:projectType?.name,description:input.description?.trim()||undefined,referenceCode:input.referenceCode?.trim()||undefined,visibility:input.visibility||"company",sharedOrganizationIds:organizationIds,startDate:input.startDate,endDate:input.endDate,status:stored?.status||access.project.status,updatedAt:now}});
+    return Response.json({project:{id:input.id,code:stored?.code||"",name:input.name.trim(),customerName:partner?.name||input.customerName?.trim()||undefined,partnerId:input.partnerId,partnerName:partner?.name,projectTypeId:input.projectTypeId,projectTypeName:projectType?.name,description:input.description?.trim()||undefined,referenceCode:input.referenceCode?.trim()||undefined,visibility:input.visibility||"company",sharedOrganizationIds:organizationIds,startDate:input.startDate,endDate:input.endDate,status:stored?.status||access.project.status,updatedAt:now}});
   } catch(error) {
     const contextResponse=contextErrorResponse(error);if(contextResponse)return contextResponse;
     console.error("Project update failed",error);

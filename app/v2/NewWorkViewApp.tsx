@@ -1,4 +1,5 @@
 "use client";
+import {invalidateSharedDashboard} from "./dashboard-data-store";
 
 /* eslint-disable react-hooks/set-state-in-effect, react-hooks/exhaustive-deps */
 
@@ -320,7 +321,7 @@ export default function NewWorkViewApp(){
         {workspaceView==="issues"&&<FilteredIssuesWorkspace project={project} projects={projects} tasks={tasks} initialProjectId={issueProjectPreset} onOpenTask={(projectId,taskId)=>openWorkspaceTask(projectId,taskId,"issue")} onAddIssue={taskId=>openWorkspaceTask(project?.id||"",taskId,"issue",true)} onOpenFilter={openWorkspaceFilter}/>}
         {workspaceView==="reports"&&<ReportsWorkspace project={project} tasks={tasks} onAi={openReportAi}/>}
         {workspaceView==="my-ai"&&<ContinuingAiHomeWorkspace/>}
-        {workspaceView==="settings"&&<SystemSettingsSuite/>}
+        {workspaceView==="settings"&&<SystemSettingsSuite onMasterDataChanged={()=>{invalidateSharedDashboard();loadProjects()}}/>}
         {workspaceView==="wbs"&&<>
         {!project&&<div className="wv2-project-empty"><Folders size={34}/><h2>{loadError||"등록된 프로젝트가 없습니다."}</h2><p>저장된 프로젝트가 이곳에 표시됩니다.</p></div>}
         {project&&<>

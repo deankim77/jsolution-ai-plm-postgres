@@ -55,7 +55,7 @@ const SYSTEM_CODES:Record<string,CommonCode[]>={
 };
 const metaFor=(groupCode:string)=>GROUP_META[groupCode]||{label:groupCode.replaceAll("_"," "),description:"시스템 공통 기준정보로 사용합니다."};
 
-export function CommonCodeSettings(){
+export function CommonCodeSettings({onMasterDataChanged}:{onMasterDataChanged?:()=>void}={}){
   const [partners,setPartners]=useState<Partner[]>([]);
   const [codes,setCodes]=useState<CommonCode[]>([]);
   const [projectTypes,setProjectTypes]=useState<ProjectType[]>([]);
@@ -127,11 +127,11 @@ export function CommonCodeSettings(){
   const save=async(event:FormEvent<HTMLFormElement>)=>{event.preventDefault();if(!editing||!selected||selected.systemControlled)return;setNotice("");let response:Response;
     if(selected.kind==="projectCost")response=await fetch("/api/project-cost-categories",{method:creating?"POST":"PATCH",headers:{"content-type":"application/json"},body:JSON.stringify(creating?editing.raw:{id:editing.id,...editing.raw})});
     else response=await fetch("/api/system/master-data",{method:creating?"POST":"PATCH",headers:{"content-type":"application/json"},body:JSON.stringify(creating?editing.raw:{...editing.raw,id:editing.id})});
-    const result=await response.json();if(!response.ok){setNotice(result.error||"저장하지 못했습니다.");return}closePanel();await load()};
+    const result=await response.json();if(!response.ok){setNotice(result.error||"저장하지 못했습니다.");return}closePanel();await load();if(selected.kind==="partner"||selected.kind==="projectType")onMasterDataChanged?.()};
   const remove=async(row:ManagedRow)=>{if(!selected||selected.systemControlled||row.locked)return;if(!window.confirm(`'${row.label}' 항목을 삭제할까요?`))return;let response:Response;
     if(selected.kind==="projectCost")response=await fetch("/api/project-cost-categories",{method:"DELETE",headers:{"content-type":"application/json"},body:JSON.stringify({id:row.id})});
     else{const entity=selected.kind==="partner"?"partner":selected.kind==="projectType"?"projectType":selected.kind==="projectRole"?"projectRole":"code";response=await fetch("/api/system/master-data",{method:"DELETE",headers:{"content-type":"application/json"},body:JSON.stringify({entity,id:row.id})})}
-    const result=await response.json();if(!response.ok){setNotice(result.error||"삭제하지 못했습니다.");return}await load()};
+    const result=await response.json();if(!response.ok){setNotice(result.error||"삭제하지 못했습니다.");return}await load();if(selected.kind==="partner"||selected.kind==="projectType")onMasterDataChanged?.()};
 
   const isSystem=Boolean(selected?.systemControlled);
   const addLabel=selected?.kind==="partner"?"거래처 추가":selected?.kind==="projectType"?"프로젝트 유형 추가":selected?.kind==="projectRole"?"프로젝트 Role 추가":selected?.kind==="projectCost"?`${COST_NAMES[activeCostGroup]} 항목 추가`:"코드 추가";

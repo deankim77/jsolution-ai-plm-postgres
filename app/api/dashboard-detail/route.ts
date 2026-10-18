@@ -1,3 +1,4 @@
+import {projectMasterRevision} from "../../../lib/project-master-cache";
 import { getLegacyDbCompat } from "../../../db/postgres-d1-compat";
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import {getChatGPTUser} from "../../chatgpt-auth";
@@ -6,7 +7,7 @@ import {listUnreadNotifications} from "../notifications/notification-service";
 
 type D1Statement={bind:(...values:unknown[])=>D1Statement;first:<T=any>()=>Promise<T|null>;all:<T=any>()=>Promise<{results:T[]}>;run:()=>Promise<unknown>};
 type D1={prepare:(sql:string)=>D1Statement};
-type CachedDashboard={expiresAt:number;data:any};
+type CachedDashboard={revision:number;expiresAt:number;data:any};
 async function runtimeDb():Promise<D1>{return getLegacyDbCompat() as unknown as D1;}
 const DAY=86_400_000;
 const DASHBOARD_CACHE_MS=20_000;
@@ -25,9 +26,9 @@ export async function GET(request:Request){
   const auth=await getChatGPTUser();const db=await runtimeDb();
   let context;try{context=await resolveRequestContext(request,db,{email:auth?.email})}catch(reason){return contextErrorResponse(reason)??Response.json({error:"로그인이 필요합니다."},{status:401})}
   const user={id:context.userId,companyId:context.companyId,email:context.email||auth?.email||"",name:context.name||auth?.displayName||"사용자"};
-  const cacheKey=`${user.companyId}:${user.id}`;const now=Date.now(),cached=dashboardCache.get(cacheKey);
-  if(cached&&cached.expiresAt>now)return Response.json(cached.data,{headers:{"x-dashboard-cache":"hit"}});
-  const existing=dashboardInflight.get(cacheKey);if(existing){const data=await existing;return Response.json(data,{headers:{"x-dashboard-cache":"shared"}})}
+  const cacheKey=`${user.companyId}:${user.id}`,revision=projectMasterRevision(user.companyId),inflightKey=`${cacheKey}:${revision}`;const now=Date.now(),cached=dashboardCache.get(cacheKey);
+  if(cached&&cached.revision===revision&&cached.expiresAt>now)return Response.json(cached.data,{headers:{"x-dashboard-cache":"hit"}});
+  const existing=dashboardInflight.get(inflightKey);if(existing){const data=await existing;return Response.json(data,{headers:{"x-dashboard-cache":"shared"}})}
   const build=(async()=>{
     await ensureGateDecisionSchema(db);
     const [projects,gateResult,notificationData]=await Promise.all([
@@ -51,7 +52,7 @@ export async function GET(request:Request){
             SUM(CASE WHEN issue_type='collaboration' AND status NOT IN ('closed','completed','resolved') THEN 1 ELSE 0 END) AS collaborationCount
           FROM project_issues GROUP BY project_id
         )
-        SELECT p.id,p.code,p.name,p.customer_name AS customerName,p.start_date AS startDate,p.end_date AS endDate,p.status,
+        SELECT p.id,p.code,p.name,COALESCE(partner.name,p.customer_name) AS customerName,p.start_date AS startDate,p.end_date AS endDate,p.status,
           COALESCE(ts.progress,0) AS progress,
           COALESCE(ts.taskCount,0) AS taskCount,
           COALESCE(ts.completedCount,0) AS completedCount,
@@ -63,6 +64,7 @@ export async function GET(request:Request){
           COALESCE(isx.riskCount,0) AS riskCount,
           COALESCE(isx.collaborationCount,0) AS collaborationCount
         FROM projects p
+        LEFT JOIN partners partner ON partner.id=p.partner_id AND partner.company_id=p.company_id
         LEFT JOIN task_stats ts ON ts.project_id=p.id
         LEFT JOIN deliverable_stats ds ON ds.project_id=p.id
         LEFT JOIN issue_stats isx ON isx.project_id=p.id
@@ -94,7 +96,7 @@ export async function GET(request:Request){
           WHERE g.task_type='gate'
           GROUP BY g.id
         )
-        SELECT p.id AS projectId,p.customer_name AS customerName,w.id AS taskId,REPLACE(w.wbs_code,'-REVIEW','') AS gateCode,w.name,w.status,w.progress,w.planned_end AS plannedDate,
+        SELECT p.id AS projectId,COALESCE(partner.name,p.customer_name) AS customerName,w.id AS taskId,REPLACE(w.wbs_code,'-REVIEW','') AS gateCode,w.name,w.status,w.progress,w.planned_end AS plannedDate,
           d.decision,d.note,d.decided_at AS decidedAt,u.name AS decidedBy,
           COALESCE(gts.activityCount,0) AS activityCount,
           COALESCE(gts.completedActivityCount,0) AS completedActivityCount,
@@ -102,6 +104,7 @@ export async function GET(request:Request){
           COALESCE(gis.openGateIssues,0) AS openGateIssues,
           gts.segmentStart,gts.segmentEnd,COALESCE(gts.delayDays,0) AS delayDays
         FROM projects p JOIN wbs_tasks w ON w.project_id=p.id
+        LEFT JOIN partners partner ON partner.id=p.partner_id AND partner.company_id=p.company_id
         LEFT JOIN gate_task_stats gts ON gts.gateTaskId=w.id
         LEFT JOIN gate_deliverable_stats gds ON gds.gateTaskId=w.id
         LEFT JOIN gate_issue_stats gis ON gis.gateTaskId=w.id
@@ -122,6 +125,6 @@ export async function GET(request:Request){
     const summary={total:rows.length,active:rows.filter(item=>item.status==="active").length,preparing:rows.filter(item=>item.status==="preparing").length,review:rows.reduce((sum,item)=>sum+item.reviewCount,0),delayed:rows.reduce((sum,item)=>sum+item.delayedCount,0),missingDeliverables:rows.reduce((sum,item)=>sum+item.missingDeliverables,0),openIssues:rows.reduce((sum,item)=>sum+item.openIssues,0),issues:rows.reduce((sum,item)=>sum+item.issueCount,0),risks:rows.reduce((sum,item)=>sum+item.riskCount,0),collaborations:rows.reduce((sum,item)=>sum+item.collaborationCount,0)};
     return {user:{id:user.id,email:user.email,name:user.name},summary,projects:rows,gatePortfolio:{cumulative,currentDistribution,customers,gateHealth,upcomingReviews},notifications:notificationData.items,notificationUnreadCount:notificationData.unreadCount};
   })();
-  dashboardInflight.set(cacheKey,build);
-  try{const data=await build;dashboardCache.set(cacheKey,{expiresAt:Date.now()+DASHBOARD_CACHE_MS,data});return Response.json(data,{headers:{"x-dashboard-cache":"miss"}})}finally{dashboardInflight.delete(cacheKey)}
+  dashboardInflight.set(inflightKey,build);
+  try{const data=await build;dashboardCache.set(cacheKey,{revision,expiresAt:Date.now()+DASHBOARD_CACHE_MS,data});return Response.json(data,{headers:{"x-dashboard-cache":"miss"}})}finally{dashboardInflight.delete(inflightKey)}
 }
