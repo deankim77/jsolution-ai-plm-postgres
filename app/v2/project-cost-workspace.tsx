@@ -3,7 +3,7 @@
 import {useColumnFilters} from "./use-column-filters";
 import {useEffect,useMemo,useRef,useState,type FormEvent} from "react";
 import {ArrowDown,ArrowUp,BarChart3,ChevronDown,ChevronRight,Layers3,Plus,RefreshCw,Search,Trash2,WalletCards,X} from "lucide-react";
-import {CommonProjectSelector} from "./common-project-selector";
+import {CommonProjectSelector,type ProjectSelectorItem} from "./common-project-selector";
 import {V2PanelExpandButton} from "./v2-ui-foundation";
 import "./project-cost-workspace.css";
 import "./project-cost-entry-panel.css";
@@ -36,7 +36,7 @@ const SUMMARY_ROWS=[
   {key:"SUMMARY_OTHER",label:"기타",description:"기타 예비비, 기타 비용",group:"OTHER" as GroupCode},
 ] as const;
 
-export function ProjectCostWorkspace(){
+export function ProjectCostWorkspace({projects=[]}:{projects?:ProjectSelectorItem[]}={}){
   const [data,setData]=useState<CostData>(EMPTY),[projectId,setProjectId]=useState(""),[tab,setTab]=useState<Tab>("summary"),[loading,setLoading]=useState(true),[notice,setNotice]=useState("");
   const [rootCosts,setRootCosts]=useState<RootCost[]>([]),[rootCandidates,setRootCandidates]=useState<RootCandidate[]>([]),[members,setMembers]=useState<Member[]>([]);
   const [entryOpen,setEntryOpen]=useState(false),[entryWide,setEntryWide]=useState(false),[rootOpen,setRootOpen]=useState(false),[saving,setSaving]=useState(false),[rootSearch,setRootSearch]=useState(""),[rootOwner,setRootOwner]=useState("");
@@ -55,6 +55,7 @@ export function ProjectCostWorkspace(){
   }catch(reason){if(isCurrent())setNotice(reason instanceof Error?reason.message:"원가 정보를 불러오지 못했습니다.")}finally{if(isCurrent())setLoading(false)}};
   useEffect(()=>{void load("");return()=>{loadSequence.current++}},[]);
   const selectProject=(id:string)=>{if(saving)return;selectedProjectId.current=id;setProjectId(id);setEntryOpen(false);setRootOpen(false);entryProjectId.current="";setData(current=>({...EMPTY,projects:current.projects}));setRootCosts([]);setTab("summary");void load(id)};
+  const projectOptions=useMemo(()=>{const metadata=new Map(projects.map(item=>[item.id,item]));return data.projects.map(item=>({...metadata.get(item.id),...item}))},[data.projects,projects]);
   const categories=data.categories.filter(c=>c.enabled!==0),manualCategories=categories.filter(c=>c.sourceType!=="BOM");
   const budgets=useMemo(()=>new Map(data.budgets.map(row=>[row.categoryCode,Number(row.amount||0)])),[data.budgets]);
   const actualByCategory=useMemo(()=>{const map=new Map<string,number>();for(const row of data.entries)map.set(row.categoryCode,(map.get(row.categoryCode)||0)+Number(row.amount||0));return map},[data.entries]);
@@ -79,7 +80,7 @@ export function ProjectCostWorkspace(){
   const filteredCandidates=rootCandidates.filter(item=>!item.selected&&(!rootSearch.trim()||`${item.partNumber} ${item.name} ${item.spec||""} ${item.partType}`.toLowerCase().includes(rootSearch.trim().toLowerCase())));
   return <section className="pcw-shell">
     <header className="pcw-head"><div className="wv2-module-head-main"><small>PROJECT COST MANAGEMENT</small><div className="wv2-module-title-row"><h1>원가 관리</h1><p>분산된 개발 BOM과 프로젝트 비용을 통합하여 개발원가를 관리합니다.</p></div></div><div><button onClick={()=>void load()}><RefreshCw size={18}/>새로고침</button></div></header>
-    <div className="pcw-project-bar"><div className="pcw-project-picker"><span>프로젝트</span><CommonProjectSelector compact projects={data.projects} value={projectId} onChange={selectProject} allLabel="프로젝트 선택" allowAll={false} showLabel={false}/></div></div>
+    <div className="pcw-project-bar"><div className="pcw-project-picker"><span>프로젝트</span><CommonProjectSelector compact projects={projectOptions} value={projectId} onChange={selectProject} allLabel="프로젝트 선택" allowAll={false} showLabel={false}/></div></div>
     {notice&&<p className="pcw-notice">{notice}</p>}
     <nav className="pcw-tabs"><button className={tab==="summary"?"active":""} onClick={()=>setTab("summary")}><BarChart3 size={18}/>프로젝트 원가 현황</button><button className={tab==="budget"?"active":""} onClick={()=>setTab("budget")}><WalletCards size={18}/>프로젝트 예산 등록</button><button className={tab==="bom"?"active":""} onClick={()=>setTab("bom")}><Layers3 size={18}/>BOM 원가</button><button className={tab==="entries"?"active":""} onClick={()=>setTab("entries")}><WalletCards size={18}/>프로젝트 비용 등록</button></nav>
     {loading?<div className="pcw-empty">원가 정보를 불러오는 중입니다.</div>:tab==="summary"?<SummaryView rows={summaryRows} bomCoverage={bomCoverage}/>:tab==="budget"?<BudgetView rows={summaryRows} onSaveBudget={saveSummaryBudget}/>:tab==="bom"?<BomView roots={rootCosts} members={members} target={bomTarget} actual={bomActual} coverage={bomCoverage} onAdd={()=>setRootOpen(true)} onRemove={removeRoot} onOwner={changeOwner} onMove={moveRoot} onSavePart={updatePartCost}/>:<EntriesView data={data} categories={categories} actuals={actualByCategory} onAdd={openEntry} onDelete={removeEntry}/>} 
