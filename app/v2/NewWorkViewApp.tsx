@@ -296,7 +296,7 @@ export default function NewWorkViewApp(){
   const activeWorkspace=workspaceTabs.find(item=>item.key===activeWorkspaceTab);
 
   return <main className={`wv2 ${contextOpen?"context-open":""} ${panelOpen?"panel-open":""}`}>
-    <GlobalRail onSearch={()=>setGlobalOpen(true)} onView={setWorkspaceView} active={workspaceView} onProjectPlmViewChange={setProjectPlmView} projectWbsResetKey={wbsNavigationKey} onPreviewDocument={openDocumentPreview} />
+    <GlobalRail onSearch={()=>setGlobalOpen(true)} onView={setWorkspaceView} active={workspaceView} onProjectPlmViewChange={setProjectPlmView} projectWbsResetKey={wbsNavigationKey} onOpenProjectTask={(projectId,taskId)=>openWorkspaceTask(projectId,taskId,"deliverable",true)} onPreviewDocument={openDocumentPreview} />
      {contextOpen&&<ContextNav project={project} projects={projects} user={sessionUser} active={workspaceView} onView={setWorkspaceView} onProject={next=>{setProject(next);setSelectedId("");setPanelOpen(false);if(workspaceView==="wbs")openWorkspaceTab({key:`wbs:${next.id}`,view:"wbs",entityId:next.id,title:`WBS · ${next.name}`})}} onClose={()=>setContextOpen(false)}/>}
     <section className="wv2-workspace">
       <header className="wv2-topbar">

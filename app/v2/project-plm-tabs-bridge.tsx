@@ -32,7 +32,7 @@ const registered=(item:Deliverable,versions:Version[])=>Number(item.revisionCoun
 
 function findButton(root:ParentNode|null,label:string){return [...(root?.querySelectorAll<HTMLButtonElement>("button")||[])].find(button=>button.textContent?.trim().includes(label));}
 
-export default function ProjectPlmTabsBridge({onActiveChange,onPreviewDocument,resetKey}:{onActiveChange?:(view:PlmView)=>void;onPreviewDocument?:(target:DocumentPreviewTarget)=>void;resetKey?:number}={}){
+export default function ProjectPlmTabsBridge({onActiveChange,onPreviewDocument,resetKey,onOpenProjectTask}:{onActiveChange?:(view:PlmView)=>void;onPreviewDocument?:(target:DocumentPreviewTarget)=>void;resetKey?:number;onOpenProjectTask?:(projectId:string,taskId:string)=>void}={}){
   const {features}=useFeatureSettings();
   useEffect(()=>{if(!features.drawings)setActive(value=>value==="drawings"?null:value);if(!features.partBom){setActive(value=>value==="bom"?null:value);setSelectedBom(null);}},[features.drawings,features.partBom]);
   const [tabHost,setTabHost]=useState<HTMLElement|null>(null),[canvasHost,setCanvasHost]=useState<HTMLElement|null>(null);
@@ -121,7 +121,7 @@ export default function ProjectPlmTabsBridge({onActiveChange,onPreviewDocument,r
   if(!tabHost||!canvasHost)return null;
   return <>
     {createPortal(<><button data-project-plm-tab="deliverables" className={active==="deliverables"?"active":""} onClick={()=>setActive("deliverables")}><FileText size={18}/>산출물</button>{features.drawings&&<button data-project-plm-tab="drawings" className={active==="drawings"?"active":""} onClick={()=>setActive("drawings")}><DrawingIcon size={18}/>도면</button>}{features.partBom&&<button data-project-plm-tab="bom" className={active==="bom"?"active":""} onClick={()=>setActive("bom")}><GitBranch size={18}/>BOM</button>}</>,tabHost)}
-    {active&&(active!=="drawings"||features.drawings)&&(active!=="bom"||features.partBom)&&createPortal(<section className={`project-plm-view${active==="deliverables"?" project-deliverables-view":""}`}>{loading?<div className="project-plm-state">데이터를 불러오는 중…</div>:error?<div className="project-plm-state error">{error}</div>:active==="deliverables"?<DeliverableList key={project?.id} rows={documentRows} versions={versions} taskMap={taskMap} onOpen={item=>item.taskId&&openTask(item.taskId)} onPreview={onPreviewDocument}/>:active==="drawings"?<DrawingList rows={drawingRows} versions={versions} taskMap={taskMap} onOpen={item=>item.taskId&&openTask(item.taskId)} onPreview={openDrawingPreview}/>:<BomList groups={bomGroups} onOpen={openBom}/>}</section>,canvasHost)}
+    {active&&(active!=="drawings"||features.drawings)&&(active!=="bom"||features.partBom)&&createPortal(<section className={`project-plm-view${active==="deliverables"?" project-deliverables-view":""}`}>{loading?<div className="project-plm-state">데이터를 불러오는 중…</div>:error?<div className="project-plm-state error">{error}</div>:active==="deliverables"?<DeliverableList key={project?.id} rows={documentRows} versions={versions} taskMap={taskMap} onOpen={item=>{if(project&&item.taskId)onOpenProjectTask?.(project.id,item.taskId)}} onPreview={onPreviewDocument}/>:active==="drawings"?<DrawingList rows={drawingRows} versions={versions} taskMap={taskMap} onOpen={item=>item.taskId&&openTask(item.taskId)} onPreview={openDrawingPreview}/>:<BomList groups={bomGroups} onOpen={openBom}/>}</section>,canvasHost)}
     {selectedBom&&bomTabHost&&createPortal(<button className="project-bom-panel-tab active"><GitBranch size={18}/>BOM</button>,bomTabHost)}
     {selectedBom&&bomBodyHost&&createPortal(<BomPanel group={selectedBom}/>,bomBodyHost)}
   </>;
@@ -144,12 +144,12 @@ function DeliverableList({rows,versions,taskMap,onOpen,onPreview}:{rows:Delivera
   return <div className="project-deliverables-list">
     <header className="project-deliverables-summary"><b>프로젝트 산출물</b><div><span>전체 <strong>{rows.length}</strong></span><span>등록 <strong>{registeredCount}</strong></span><span>필수 미등록 <strong className="warn">{requiredMissing}</strong></span>{filters.rows.length!==rows.length&&<span>조회 <strong>{filters.rows.length}</strong></span>}</div></header>
     <V2ListTable label="프로젝트 산출물" columns={columns} empty={!filters.rows.length?(rows.length?"조건에 맞는 산출물이 없습니다.":"등록된 프로젝트 산출물이 없습니다."):undefined}>
-      {filters.rows.map(item=><tr key={item.id}>
+      {filters.rows.map(item=><tr key={item.id} data-clickable={item.taskId?true:undefined} onClick={()=>{if(item.taskId)onOpen(item)}}>
         <td><span className="v2-list-cell">{sourceLabel(item)}</span></td>
-        <td><button className="v2-list-name" onClick={()=>onOpen(item)} disabled={!item.taskId} title={item.name}><b>{item.name}</b></button></td>
+        <td><button className="v2-list-name" onClick={event=>{event.stopPropagation();onOpen(item)}} disabled={!item.taskId} title={item.name}><b>{item.name}</b></button></td>
         <td><span className="v2-list-cell" title={taskLabel(item)}>{taskLabel(item)}</span></td>
         <td>{registered(item,versions)?"등록":"미등록"}</td><td>{statusLabel(item.status)}</td><td>{revisionLabel(item)}</td>
-        <td><button className="v2-list-open" disabled={!onPreview||!registered(item,versions)} onClick={()=>onPreview?.({deliverableId:item.id,versionId:latestVersion(item)?.id,name:item.name})}>미리보기</button></td>
+        <td><button className="v2-list-open" disabled={!onPreview||!registered(item,versions)} onClick={event=>{event.stopPropagation();onPreview?.({deliverableId:item.id,versionId:latestVersion(item)?.id,name:item.name})}}>미리보기</button></td>
       </tr>)}
     </V2ListTable>
   </div>;
