@@ -57,7 +57,7 @@ const personalNav:RailItem[]=[
 
 const iconStyle={width:"var(--v2-icon-size-primary)",height:"var(--v2-icon-size-primary)"};
 
-export default function GlobalRail({onSearch,onView,active,onProjectPlmViewChange,onPreviewDocument,projectWbsResetKey,onOpenProjectTask}:{onSearch:()=>void;onView:(view:RailWorkspaceView)=>void;active:string;onProjectPlmViewChange?:(view:PlmView)=>void;onPreviewDocument?:(target:DocumentPreviewTarget)=>void;projectWbsResetKey?:number;onOpenProjectTask?:(projectId:string,taskId:string)=>void}){
+export default function GlobalRail({onSearch,onView,active,onProjectPlmViewChange,onPreviewDocument,projectWbsResetKey,onOpenProjectTask,projectWbsView}:{onSearch:()=>void;onView:(view:RailWorkspaceView)=>void;active:string;onProjectPlmViewChange?:(view:PlmView)=>void;onPreviewDocument?:(target:DocumentPreviewTarget)=>void;projectWbsResetKey?:number;projectWbsView?:PlmView;onOpenProjectTask?:(projectId:string,taskId:string)=>void}){
   const {features}=useFeatureSettings();
   const [mounted,setMounted]=useState(false);useEffect(()=>setMounted(true),[]);
   const renderItem=(item:RailItem)=>{
@@ -65,5 +65,5 @@ export default function GlobalRail({onSearch,onView,active,onProjectPlmViewChang
     const action=item.label==="통합검색"?onSearch:item.action;
     return <button key={item.label} className={item.view&&active===item.view?"active":""} onClick={action||(()=>item.view&&onView(item.view))} title={item.label}><Icon style={iconStyle}/><span>{item.label}</span></button>;
   };
-  return <><aside className="wv2-rail"><button className="wv2-brand">J</button>{primaryNav.map(renderItem)}<div className="wv2-rail-spacer"/>{personalNav.map(renderItem)}</aside>{mounted&&<><ProjectPlmTabsBridge onOpenProjectTask={onOpenProjectTask} resetKey={projectWbsResetKey} onActiveChange={onProjectPlmViewChange} onPreviewDocument={onPreviewDocument}/><DocumentPreviewOverlayBridge/><BomCentralTabBridge/>{features.partBom&&<BomEditorCommandBridge/>}</>}</>;
+  return <><aside className="wv2-rail"><button className="wv2-brand">J</button>{primaryNav.map(renderItem)}<div className="wv2-rail-spacer"/>{personalNav.map(renderItem)}</aside>{mounted&&<><ProjectPlmTabsBridge requestedView={projectWbsView} onOpenProjectTask={onOpenProjectTask} resetKey={projectWbsResetKey} onActiveChange={onProjectPlmViewChange} onPreviewDocument={onPreviewDocument}/><DocumentPreviewOverlayBridge/><BomCentralTabBridge/>{features.partBom&&<BomEditorCommandBridge/>}</>}</>;
 }
