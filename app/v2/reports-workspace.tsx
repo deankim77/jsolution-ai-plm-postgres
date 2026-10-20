@@ -66,9 +66,9 @@ export function ReportsWorkspace({project,projects,onAi,onPreview}:Props){
     }catch(reason){if(!controller.signal.aborted)setPrepareError(reason instanceof Error?reason.message:"자료를 준비하지 못했습니다.")}finally{if(!controller.signal.aborted)setPreparing(false)}
   };
   const columns:V2ListColumn[]=useMemo(()=>[
-    {key:"project",label:"프로젝트",width:210,header:columnFilters.heading("project")},
+    {key:"project",label:"프로젝트",width:320,header:columnFilters.heading("project")},
     {key:"kind",label:"보고 유형",width:150,header:columnFilters.heading("kind")},
-    {key:"title",label:"보고서명",width:260,grow:true},
+    {key:"title",label:"보고서명",width:220,grow:true},
     {key:"period",label:"보고 기간",width:205,header:columnFilters.heading("period")},
     {key:"author",label:"작성자",width:100,header:columnFilters.heading("author")},
     {key:"created",label:"생성일",width:150,header:columnFilters.heading("created")},
@@ -81,7 +81,7 @@ export function ReportsWorkspace({project,projects,onAi,onPreview}:Props){
     {error&&<p className="wv2-module-notice" role="alert">{error}</p>}
     <div className="wv2-module-toolbar" aria-label="보고서 조회 결과"><span>{visible.length}개 보고서</span></div>
     <V2ListTable label="보고 · 회의 결과 목록" columns={columns} empty={!visible.length?(loading?"저장된 보고서를 불러오는 중…":error?"보고서 조회에 실패했습니다.":items.length?"조회 조건에 맞는 결과가 없습니다.":"저장된 보고서가 없습니다. 보고서 작성에서 새 결과를 만들 수 있습니다."):undefined} footer={hasMore&&<div className="wv2-reports-more"><button disabled={loading} onClick={()=>void load(nextOffset)}>{loading?"불러오는 중…":"다음 결과 불러오기"}</button></div>}>
-      {visible.map(row=><tr key={row.id}><td><span className="v2-list-cell">{row.projectName}</span><small>{row.projectCode}</small></td><td>{reportLabels[row.kind]}</td><td><button className="v2-list-name" disabled={Boolean(opening)} onClick={()=>void openResult(row)}><b>{row.title}</b><small>{row.format==="pptx"?"PPT 슬라이드":"문서"} 미리보기</small></button></td><td>{row.period}</td><td>{row.author}</td><td>{formatDate(row.createdAt)}</td><td><button className="v2-list-open" disabled={Boolean(opening)} title="미리보기" aria-label={`${row.title} 미리보기`} onClick={()=>void openResult(row)}><Eye size={18}/></button></td><td><button className="v2-list-open" disabled={Boolean(opening)} title="다운로드" aria-label={`${row.title} 다운로드`} onClick={()=>void openResult(row,true)}><Download size={18}/></button></td></tr>)}
+      {visible.map(row=><tr key={row.id}><td><span className="v2-list-cell" title={row.projectName}>{row.projectName}</span><small className="v2-list-cell" title={row.projectCode}>{row.projectCode}</small></td><td>{reportLabels[row.kind]}</td><td><button className="v2-list-name" disabled={Boolean(opening)} onClick={()=>void openResult(row)}><b>{row.title}</b><small>{row.format==="pptx"?"PPT 슬라이드":"문서"} 미리보기</small></button></td><td>{row.period}</td><td>{row.author}</td><td>{formatDate(row.createdAt)}</td><td><button className="v2-list-open" disabled={Boolean(opening)} title="미리보기" aria-label={`${row.title} 미리보기`} onClick={()=>void openResult(row)}><Eye size={18}/></button></td><td><button className="v2-list-open" disabled={Boolean(opening)} title="다운로드" aria-label={`${row.title} 다운로드`} onClick={()=>void openResult(row,true)}><Download size={18}/></button></td></tr>)}
     </V2ListTable>
     <p className="wv2-reports-note">현재 계정에 저장된 보고 결과입니다. 목록 조회·미리보기·다운로드는 AI를 다시 호출하지 않습니다.</p>
     {creating&&<WorkPanelFrame title={prepared?"AI 전송 자료 확인":"보고서 작성"} eyebrow="REPORT · MEETING" description={kind==="weekly"?"저장 데이터로 7개 항목의 주간보고 슬라이드를 작성합니다. AI 호출 없음.":prepared?"아래 요약을 확인한 뒤 AI 작성을 실행하세요.":"보고 기간과 필요한 자료를 선택하세요."} wide={wide} onWide={()=>setWide(value=>!value)} onClose={closeCreate}><section className="wv2-panel-body"><form className="wv2-form" onSubmit={prepare}>
