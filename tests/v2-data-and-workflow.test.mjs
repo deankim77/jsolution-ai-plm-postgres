@@ -42,7 +42,7 @@ test("CSM R14 demo dataset preserves customer process counts",()=>{
 
 test("schedule recovery changes remain approval gated",async()=>{
   const source=await readFile("app/v2/advanced-gantt-view.tsx","utf8");
-  for(const token of ["AI 일정 회복안","승인 전에는 현재 일정이 변경되지 않습니다.","승인 후 적용","buildRecoveryProposal","applyProposal"])assert.ok(source.includes(token),token);
+  for(const token of ["일정 재조정안","승인 전에는 현재 일정이 변경되지 않습니다.","승인 후 적용","buildRecoveryProposal","applyProposal"])assert.ok(source.includes(token),token);
   assert.ok(source.indexOf("buildRecoveryProposal")<source.indexOf("applyProposal"));
 });
 
