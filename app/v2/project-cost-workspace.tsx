@@ -1,7 +1,7 @@
 "use client";
 
 import {useColumnFilters} from "./use-column-filters";
-import {useEffect,useMemo,useState,type FormEvent} from "react";
+import {useEffect,useMemo,useRef,useState,type FormEvent} from "react";
 import {ArrowDown,ArrowUp,BarChart3,ChevronDown,ChevronRight,Layers3,Plus,RefreshCw,Search,Trash2,WalletCards,X} from "lucide-react";
 import {CommonProjectSelector} from "./common-project-selector";
 import {V2PanelExpandButton} from "./v2-ui-foundation";
@@ -41,17 +41,20 @@ export function ProjectCostWorkspace(){
   const [rootCosts,setRootCosts]=useState<RootCost[]>([]),[rootCandidates,setRootCandidates]=useState<RootCandidate[]>([]),[members,setMembers]=useState<Member[]>([]);
   const [entryOpen,setEntryOpen]=useState(false),[entryWide,setEntryWide]=useState(false),[rootOpen,setRootOpen]=useState(false),[saving,setSaving]=useState(false),[rootSearch,setRootSearch]=useState(""),[rootOwner,setRootOwner]=useState("");
   const [entry,setEntry]=useState(newEntry);
+  const loadSequence=useRef(0),selectedProjectId=useRef(""),entryProjectId=useRef("");
 
-  const load=async(id=projectId)=>{setLoading(true);try{
+  const load=async(id=projectId)=>{if(id&&selectedProjectId.current&&id!==selectedProjectId.current)return;const sequence=++loadSequence.current,isCurrent=()=>sequence===loadSequence.current;setLoading(true);try{
     const response=await fetch(`/api/project-costs${id?`?projectId=${encodeURIComponent(id)}`:""}`,{cache:"no-store"});const result=await response.json();if(!response.ok)throw new Error(result.error||"원가 정보를 불러오지 못했습니다.");
-    if(!id&&result.projects?.length){setProjectId(result.projects[0].id);setLoading(false);return void load(result.projects[0].id)}
+    if(!isCurrent())return;
+    if(!id&&result.projects?.length){selectedProjectId.current=result.projects[0].id;setProjectId(result.projects[0].id);return void load(result.projects[0].id)}
+    if(id&&result.project?.id!==id)throw new Error("선택한 프로젝트의 원가 정보가 아닙니다. 다시 조회해 주세요.");
     setData({...EMPTY,...result});
-    if(id){const rootsResponse=await fetch(`/api/project-costs/bom-roots?projectId=${encodeURIComponent(id)}`,{cache:"no-store"});const rootsData=await rootsResponse.json();if(!rootsResponse.ok)throw new Error(rootsData.error||"프로젝트 BOM을 불러오지 못했습니다.");setRootCandidates(rootsData.candidates||[]);setMembers(rootsData.members||[]);
-      const roots=(rootsData.roots||[]) as RootBom[];const costs=await Promise.all(roots.map(async root=>{const costResponse=await fetch(`/api/project-costs/bom-cost-data?projectId=${encodeURIComponent(id)}&rootId=${encodeURIComponent(root.rootPartId)}`,{cache:"no-store"});const cost=costResponse.ok?await costResponse.json():{rows:[],targetMaterial:0,actualMaterial:0,coverage:0};return {...root,...cost} as RootCost}));setRootCosts(costs);
+    if(id){const rootsResponse=await fetch(`/api/project-costs/bom-roots?projectId=${encodeURIComponent(id)}`,{cache:"no-store"});const rootsData=await rootsResponse.json();if(!rootsResponse.ok)throw new Error(rootsData.error||"프로젝트 BOM을 불러오지 못했습니다.");if(!isCurrent())return;setRootCandidates(rootsData.candidates||[]);setMembers(rootsData.members||[]);
+      const roots=(rootsData.roots||[]) as RootBom[];const costs=await Promise.all(roots.map(async root=>{const costResponse=await fetch(`/api/project-costs/bom-cost-data?projectId=${encodeURIComponent(id)}&rootId=${encodeURIComponent(root.rootPartId)}`,{cache:"no-store"});const cost=costResponse.ok?await costResponse.json():{rows:[],targetMaterial:0,actualMaterial:0,coverage:0};return {...root,...cost} as RootCost}));if(!isCurrent())return;setRootCosts(costs);
     }else{setRootCosts([]);setRootCandidates([]);setMembers([])}setNotice("");
-  }catch(reason){setNotice(reason instanceof Error?reason.message:"원가 정보를 불러오지 못했습니다.")}finally{setLoading(false)}};
-  useEffect(()=>{void load("")},[]);
-  const selectProject=(id:string)=>{setProjectId(id);setTab("summary");void load(id)};
+  }catch(reason){if(isCurrent())setNotice(reason instanceof Error?reason.message:"원가 정보를 불러오지 못했습니다.")}finally{if(isCurrent())setLoading(false)}};
+  useEffect(()=>{void load("");return()=>{loadSequence.current++}},[]);
+  const selectProject=(id:string)=>{if(saving)return;selectedProjectId.current=id;setProjectId(id);setEntryOpen(false);setRootOpen(false);entryProjectId.current="";setData(current=>({...EMPTY,projects:current.projects}));setRootCosts([]);setTab("summary");void load(id)};
   const categories=data.categories.filter(c=>c.enabled!==0),manualCategories=categories.filter(c=>c.sourceType!=="BOM");
   const budgets=useMemo(()=>new Map(data.budgets.map(row=>[row.categoryCode,Number(row.amount||0)])),[data.budgets]);
   const actualByCategory=useMemo(()=>{const map=new Map<string,number>();for(const row of data.entries)map.set(row.categoryCode,(map.get(row.categoryCode)||0)+Number(row.amount||0));return map},[data.entries]);
@@ -68,9 +71,9 @@ export function ProjectCostWorkspace(){
   const removeRoot=async(root:RootBom)=>{if(!confirm(`${root.partNumber}을 프로젝트 원가 Root에서 제외할까요?\n원본 BOM은 삭제되지 않습니다.`))return;try{await rootPost({action:"remove",rootPartId:root.rootPartId});setNotice("Root BOM을 제외했습니다.");await load()}catch(reason){setNotice(reason instanceof Error?reason.message:"Root BOM을 제외하지 못했습니다.")}};
   const changeOwner=async(rootPartId:string,ownerUserId:string)=>{try{await rootPost({action:"owner",rootPartId,ownerUserId});await load()}catch(reason){setNotice(reason instanceof Error?reason.message:"담당자를 변경하지 못했습니다.")}};
   const moveRoot=async(index:number,direction:-1|1)=>{const next=[...rootCosts],target=index+direction;if(target<0||target>=next.length)return;[next[index],next[target]]=[next[target],next[index]];setRootCosts(next);try{await rootPost({action:"reorder",rootPartIds:next.map(root=>root.rootPartId)});setNotice("Root BOM 순서를 변경했습니다.")}catch(reason){setNotice(reason instanceof Error?reason.message:"순서를 변경하지 못했습니다.");await load()}};
-  const closeEntry=()=>{setEntryOpen(false);setEntryWide(false)};
-  const openEntry=()=>{setEntry(newEntry());setEntryWide(false);setEntryOpen(true)};
-  const addEntry=async(event:FormEvent)=>{event.preventDefault();setSaving(true);try{const result=await post({action:"add-entry",projectId,...entry});const savedEntry:CostEntry={id:String(result.id),taskId:entry.taskId||undefined,categoryCode:entry.categoryCode,amount:Number(entry.amount),occurredOn:entry.occurredOn,vendor:entry.vendor||undefined,note:entry.note||undefined};setData(current=>({...current,entries:[savedEntry,...current.entries]}));closeEntry();setEntry(newEntry());setNotice("비용 실적을 등록했습니다.");await load()}catch(reason){setNotice(reason instanceof Error?reason.message:"비용 실적을 등록하지 못했습니다.")}finally{setSaving(false)}};
+  const closeEntry=()=>{setEntryOpen(false);setEntryWide(false);entryProjectId.current=""};
+  const openEntry=()=>{if(loading||!projectId||data.project?.id!==projectId)return;entryProjectId.current=projectId;setEntry(newEntry());setEntryWide(false);setEntryOpen(true)};
+  const addEntry=async(event:FormEvent)=>{event.preventDefault();if(saving)return;const targetProjectId=entryProjectId.current;if(!targetProjectId||targetProjectId!==projectId||data.project?.id!==targetProjectId){setNotice("프로젝트를 다시 선택한 뒤 비용을 등록해 주세요.");return}setSaving(true);try{const result=await post({action:"add-entry",projectId:targetProjectId,...entry});const savedEntry:CostEntry={id:String(result.id),taskId:entry.taskId||undefined,categoryCode:entry.categoryCode,amount:Number(entry.amount),occurredOn:entry.occurredOn,vendor:entry.vendor||undefined,note:entry.note||undefined};if(selectedProjectId.current!==targetProjectId)return;setData(current=>current.project?.id===targetProjectId?{...current,entries:[savedEntry,...current.entries]}:current);closeEntry();setEntry(newEntry());setNotice("비용 실적을 등록했습니다.");await load()}catch(reason){setNotice(reason instanceof Error?reason.message:"비용 실적을 등록하지 못했습니다.")}finally{setSaving(false)}};
   const removeEntry=async(id:string)=>{if(!confirm("이 비용 실적을 삭제할까요?"))return;try{await post({action:"delete-entry",projectId,id});await load()}catch(reason){setNotice(reason instanceof Error?reason.message:"비용 실적을 삭제하지 못했습니다.")}};
 
   const filteredCandidates=rootCandidates.filter(item=>!item.selected&&(!rootSearch.trim()||`${item.partNumber} ${item.name} ${item.spec||""} ${item.partType}`.toLowerCase().includes(rootSearch.trim().toLowerCase())));
