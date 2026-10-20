@@ -3,6 +3,7 @@
 import {useCallback,useEffect,useMemo,useRef,useState,type FormEvent} from "react";
 import {Download,Filter,Plus,RefreshCw,Search} from "lucide-react";
 import {CommonProjectSelector} from "./common-project-selector";
+import {ReportProjectSummary} from "./report-project-summary";
 import {V2ListTable,type V2ListColumn} from "./v2-list-table";
 import {useColumnFilters} from "./use-column-filters";
 import {FilterChipGroup,FilterDateRange,FilterSection,type WorkspaceFilterConfig} from "./workspace-filter-panel";
@@ -78,6 +79,7 @@ export function ReportsWorkspace({project,projects,onProjectChange,onAi,onPrevie
   return <section className="wv2-module wv2-reports-workspace">
     <header className="wv2-module-head"><div className="wv2-module-head-main"><small>REPORT · MEETING</small><div className="wv2-module-title-row"><h1>보고 · 회의</h1><p>주간보고서·회의 안건·Baseline 분석의 저장된 결과를 조회하고 활용합니다.</p></div></div><button className="primary" disabled={!projects.length} onClick={()=>{setDraftProjectId(projectId||project?.id||projects[0]?.id||"");setPrepared(null);setPrepareError("");setCreating(true)}}><Plus size={18}/>AI 보고서 작성</button></header>
     <div className="wv2-module-toolbar"><label><Search size={18}/><input aria-label="보고서 검색" value={query} onChange={event=>setQuery(event.target.value)} placeholder="보고서명 · 프로젝트 · 작성자 검색"/></label><button onClick={openFilters}><Filter size={18}/>상세 필터{activeCount>0&&<b>{activeCount}</b>}</button><CommonProjectSelector compact projects={projects} value={projectId} onChange={chooseProject} showLabel={false}/><button disabled={loading} onClick={()=>void load()} aria-label="보고서 새로고침"><RefreshCw size={18}/></button><span>{visible.length}개 결과</span></div>
+    {projectId&&<ReportProjectSummary key={projectId} projectId={projectId}/>}
     {error&&<p className="wv2-module-notice" role="alert">{error}</p>}
     <V2ListTable label="보고 · 회의 결과 목록" columns={columns} empty={!visible.length?(loading?"저장된 보고서를 불러오는 중…":error?"보고서 조회에 실패했습니다. 새로고침으로 다시 시도해 주세요.":items.length?"조회 조건에 맞는 결과가 없습니다.":"저장된 보고서가 없습니다. AI 보고서 작성에서 새 결과를 만들 수 있습니다."):undefined} footer={hasMore&&<div className="wv2-reports-more"><button disabled={loading} onClick={()=>void load(nextOffset)}>{loading?"불러오는 중…":"다음 결과 불러오기"}</button></div>}>
       {visible.map(row=><tr key={row.id}><td><span className="v2-list-cell">{row.projectName}</span><small>{row.projectCode}</small></td><td>{reportLabels[row.kind]}</td><td><button className="v2-list-name" disabled={Boolean(opening)} onClick={()=>void openResult(row)}><b>{row.title}</b><small>{row.format==="pptx"?"PPT 슬라이드":"문서"} 미리보기</small></button></td><td>{row.period}</td><td>{row.author}</td><td>{formatDate(row.createdAt)}</td><td><button className="v2-list-open" disabled={Boolean(opening)} title="다운로드" aria-label={`${row.title} 다운로드`} onClick={()=>void openResult(row,true)}><Download size={18}/></button></td></tr>)}
