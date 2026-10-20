@@ -19,8 +19,8 @@ export function matchesColumnFilters<T>(row:T,rules:ColumnRule<T>[],selected:Col
 }
 
 /** Options come from the complete, unpaginated input, never the filtered result. */
-export function useColumnFilters<T>(rows:T[],rules:ColumnRule<T>[],onCountChange?:(count:number)=>void){
-  const [selected,setSelected]=useState<ColumnSelection>({}),[dates,setDates]=useState<ColumnDates>({});
+export function useColumnFilters<T>(rows:T[],rules:ColumnRule<T>[],onCountChange?:(count:number)=>void,initialSelected:ColumnSelection={}){
+  const [selected,setSelected]=useState<ColumnSelection>(initialSelected),[dates,setDates]=useState<ColumnDates>({});
   const matches=(row:T)=>matchesColumnFilters(row,rules,selected,dates);
   const filtered=rows.filter(matches);
   useEffect(()=>onCountChange?.(filtered.length),[filtered.length,onCountChange]);
@@ -30,5 +30,5 @@ export function useColumnFilters<T>(rows:T[],rules:ColumnRule<T>[],onCountChange
     const options=rule.options||Array.from(new Set(rows.flatMap(row=>valuesFor(row,rule)))).sort((a,b)=>a.localeCompare(b,"ko")).map(value=>({value,label:value}));
     return <div className="v2-column-heading"><span>{title??rule.label}</span>{rule.date?<V2ColumnDateFilter label={rule.label} from={dates[key]?.from||""} to={dates[key]?.to||""} onApply={(from,to)=>setDates(current=>({...current,[key]:{from,to}}))}/>:<V2ColumnMultiFilter label={rule.label} options={options} selected={selected[key]||[]} onApply={values=>setSelected(current=>({...current,[key]:values}))}/>}</div>;
   };
-  return {rows:filtered,matches,heading,reset:()=>{setSelected({});setDates({})}};
+  return {rows:filtered,matches,heading,selected,setSelection:setSelected,reset:()=>{setSelected({});setDates({})}};
 }
