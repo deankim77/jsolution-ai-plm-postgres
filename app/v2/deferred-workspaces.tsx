@@ -44,3 +44,5 @@ export const ListView=lazyNamed(()=>import("./wbs-inline-views").then(module=>({
 export const TimelineView=lazyNamed(()=>import("./wbs-inline-views").then(module=>({default:module.TimelineView})));
 export const KanbanView=lazyNamed(()=>import("./wbs-inline-views").then(module=>({default:module.KanbanView})));
 export const CalendarView=lazyNamed(()=>import("./wbs-inline-views").then(module=>({default:module.CalendarView})));
+
+export const DocumentPreviewSession=lazyNamed(()=>import("./document-preview-session"));

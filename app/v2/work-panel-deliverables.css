@@ -1,0 +1,7 @@
+/* Document actions use their own row so adding preview does not squeeze labels. */
+.wv2-panel-list.wv2-panel-deliverables>article{display:grid;grid-template-columns:minmax(0,1fr) auto}
+.wv2-panel-list.wv2-panel-deliverables>article>div:first-child{min-width:0}
+.wv2-panel-list.wv2-panel-deliverables>article>div:first-child>span{min-width:0;overflow-wrap:anywhere}
+.wv2-panel-list.wv2-panel-deliverables>article>.wv2-deliverable-review-actions{grid-column:1/-1;flex-wrap:wrap}
+.wv2-panel-list.wv2-panel-deliverables .wv2-deliverable-review-actions>button{display:inline-flex;align-items:center;justify-content:center;gap:4px;flex:0 0 auto;white-space:nowrap}
+.wv2-panel-list.wv2-panel-deliverables .wv2-deliverable-review-actions>button:disabled{opacity:.45;cursor:not-allowed}
