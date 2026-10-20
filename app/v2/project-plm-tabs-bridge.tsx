@@ -140,7 +140,7 @@ function DeliverableList({rows,versions,taskMap,onOpen,onPreview}:{rows:Delivera
   const registeredCount=rows.filter(item=>registered(item,versions)).length,requiredMissing=rows.filter(item=>(Number(item.required)===1||item.required===true)&&!registered(item,versions)).length;
   const columns=[{key:"source",label:"구분",width:130},{key:"name",label:"산출물명",width:280,grow:true},{key:"task",label:"WBS / Task",width:300,grow:true},{key:"registration",label:"등록",width:100},{key:"status",label:"상태",width:100},{key:"revision",label:"Revision",width:110},{key:"preview",label:"미리보기",width:100}].map(column=>({...column,header:column.key==="preview"?column.label:filters.heading(column.key)}));
   return <div className="project-deliverables-list">
-    <header className="project-deliverables-summary"><b>프로젝트 산출물</b><div><span>전체 <strong>{rows.length}</strong></span><span>등록 <strong>{registeredCount}</strong></span><span>필수 미등록 <strong>{requiredMissing}</strong></span>{filters.rows.length!==rows.length&&<span>조회 <strong>{filters.rows.length}</strong></span>}</div></header>
+    <header className="project-deliverables-summary"><b>프로젝트 산출물</b><div><span>전체 <strong>{rows.length}</strong></span><span>등록 <strong>{registeredCount}</strong></span><span>필수 미등록 <strong className="warn">{requiredMissing}</strong></span>{filters.rows.length!==rows.length&&<span>조회 <strong>{filters.rows.length}</strong></span>}</div></header>
     <V2ListTable label="프로젝트 산출물" columns={columns} empty={!filters.rows.length?(rows.length?"조건에 맞는 산출물이 없습니다.":"등록된 프로젝트 산출물이 없습니다."):undefined}>
       {filters.rows.map(item=><tr key={item.id}>
         <td><span className="v2-list-cell">{sourceLabel(item)}</span></td>

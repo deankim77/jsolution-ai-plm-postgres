@@ -17,6 +17,10 @@
   gap: 16px;
 }
 .project-deliverables-summary span { white-space: nowrap; }
-.project-deliverables-summary strong { font-size: var(--v2-font-size-body); }
+.project-deliverables-summary strong {
+  font-size: var(--v2-font-size-body);
+  color: #087f76;
+}
+.project-deliverables-summary strong.warn { color: #c77800; }
 .project-deliverables-list button:disabled { cursor: default; }
 .project-deliverables-list .v2-list-open:disabled { color: var(--v2-color-muted); }
