@@ -2,7 +2,7 @@ export const reportLabels={weekly:"주간보고서",meeting:"회의 안건",sche
 export type ReportKind=keyof typeof reportLabels;
 export type ReportProject={id:string;code:string;name:string};
 export type ReportContextItem={id?:string;kind?:string;title?:string;meta?:string};
-export type ReportResult={id:string;conversationId:string;projectId:string;projectName:string;projectCode:string;kind:ReportKind;title:string;period:string;author:string;createdAt:number;format:"pptx"|"docx";content?:string};
+export type ReportResult={id:string;conversationId:string;projectId:string;projectName:string;projectCode:string;kind:ReportKind;title:string;period:string;author:string;createdAt:number;format:"pptx"|"docx";generatedBy?:"system"|"ai";content?:string};
 export type SavedReportRow={id:string;conversationId:string;title:string;source:string;contextTitle:string;contextItems:string;prompt:string|null;createdAt:number;author:string|null;excerpt:string;hasSlides:boolean;content?:string};
 export function reportContextItems(value:string):ReportContextItem[]{try{const parsed=JSON.parse(value);return Array.isArray(parsed)?parsed:[]}catch{return[]}}
 export function savedReport(row:SavedReportRow,projects:ReportProject[]):ReportResult|null{
@@ -16,5 +16,5 @@ export function savedReport(row:SavedReportRow,projects:ReportProject[]):ReportR
   const project=projects.find(project=>project.id===(marker?.id||linked?.id))||[...projects].sort((a,b)=>b.name.length-a.name.length).find(project=>row.contextTitle.startsWith(project.name+" ·")||items.some(item=>item.title===project.name||item.title===`${project.name} 실행 현황`));
   if(!project)return null;
   const period=marker?.meta?.match(/보고 기간: (\d{4}-\d{2}-\d{2} ~ \d{4}-\d{2}-\d{2})/)?.[1]||"기간 미지정";
-  return {id:row.id,conversationId:row.conversationId,projectId:project.id,projectName:project.name,projectCode:project.code,kind,title:`${project.name} · ${reportLabels[kind]}`,period,author:row.author||"작성자 미지정",createdAt:Number(row.createdAt),format:row.hasSlides?"pptx":"docx",...(row.content!==undefined?{content:row.content}:{})};
+  return {id:row.id,conversationId:row.conversationId,projectId:project.id,projectName:project.name,projectCode:project.code,kind,generatedBy:row.source.includes("AI 미사용")?"system":"ai",title:`${project.name} · ${reportLabels[kind]}`,period,author:row.author||"작성자 미지정",createdAt:Number(row.createdAt),format:row.hasSlides?"pptx":"docx",...(row.content!==undefined?{content:row.content}:{})};
 }

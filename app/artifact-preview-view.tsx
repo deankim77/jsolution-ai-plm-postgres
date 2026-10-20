@@ -1,5 +1,6 @@
 "use client";
 
+import {reportSlides} from "../lib/report-slides";
 import { useMemo,useState } from "react";
 import { ChevronLeft,ChevronRight,Download } from "lucide-react";
 import { artifactLabel,artifactRows,downloadAiArtifact,type AiArtifactType } from "./ai-artifact-download";
@@ -9,13 +10,13 @@ export type ArtifactPreviewData={
   title:string;
   content:string;
   fileBase:string;
+  generatedBy?:"system"|"ai";
 };
 
 function splitPages(content:string,type:AiArtifactType){
   if(type==="xlsx"||type==="image")return [content];
   if(type==="pptx"){
-    const slideParts=content.split(/(?=슬라이드\s*\d+\s*[:.-]?)/i).map(item=>item.trim()).filter(Boolean);
-    if(slideParts.length>1)return slideParts;
+    return reportSlides(content).map(slide=>`${slide.title}\n${slide.body}`);
   }
   const paragraphs=content.split(/\n{2,}/).map(item=>item.trim()).filter(Boolean);
   const pages:string[]=[];
@@ -35,7 +36,7 @@ export default function ArtifactPreviewView({data}:{data:ArtifactPreviewData}){
   return <div className={`content ai-native-artifact-preview type-${data.type}`}>
     <section className="panel ai-artifact-workspace">
       <header className="ai-artifact-preview-head">
-        <div><span>AI GENERATED {artifactLabel(data.type)}</span><strong>{data.title}</strong><small>정식 Workspace 탭에서 전체 내용을 확인합니다.</small></div>
+        <div><span>{data.generatedBy==="system"?"PROJECT REPORT":"AI GENERATED"} {artifactLabel(data.type)}</span><strong>{data.title}</strong><small>정식 Workspace 탭에서 전체 내용을 확인합니다.</small></div>
         <div><button onClick={()=>downloadAiArtifact(data.type,data.content,data.fileBase)}><Download size={15}/> 다운로드</button></div>
       </header>
       <div className="ai-artifact-preview-toolbar">
@@ -46,7 +47,7 @@ export default function ArtifactPreviewView({data}:{data:ArtifactPreviewData}){
       <div className="ai-artifact-preview-stage">
         {data.type==="xlsx"?<div className="ai-artifact-sheet"><table><tbody>{artifactRows(data.content).map((row,rowIndex)=><tr key={rowIndex}>{row.map((cell,colIndex)=><td key={colIndex}>{cell}</td>)}</tr>)}</tbody></table></div>:
         data.type==="image"?<div className="ai-artifact-image-page"><div className="ai-artifact-image-card"><span>JSOLUTION AI</span><h1>{data.title}</h1><p>{data.content}</p></div></div>:
-        <article className={`ai-artifact-page ${data.type==="pptx"?"slide":"document"}`}><h1>{data.title}</h1><div className="ai-artifact-rule"/><div className="ai-artifact-copy">{pages[current]||data.content}</div><footer>JSOLUTION AI PMS · AI 생성 자료</footer></article>}
+        <article className={`ai-artifact-page ${data.type==="pptx"?"slide":"document"}`}><h1>{data.type==="pptx"?(pages[current]||"").split("\n")[0]:data.title}</h1><div className="ai-artifact-rule"/><div className="ai-artifact-copy">{data.type==="pptx"?(pages[current]||"").split("\n").slice(1).join("\n"):pages[current]||data.content}</div><footer>JSOLUTION PMS · {data.generatedBy==="system"?"저장 데이터 자동 보고서":"AI 생성 자료"}</footer></article>}
       </div>
     </section>
   </div>;

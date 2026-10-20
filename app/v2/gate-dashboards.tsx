@@ -1,5 +1,7 @@
 "use client";
 
+import {projectPlanProgress} from "../../lib/project-plan-progress";
+
 import {useState} from "react";
 import {filterPortfolioProjects,portfolioTypeOptions,portfolioGateRows,unassignedProjectType} from "../../lib/portfolio-project-filter";
 import {AlertTriangle,Blocks,ChevronRight,ClipboardCheck,Cog,Construction,FileStack,GanttChartSquare,LayoutDashboard,MessageSquareText,Pencil,RotateCw,Sparkles,Table2,Truck} from "lucide-react";
@@ -25,12 +27,7 @@ const decisionLabel=(value?:string|null)=>value==="PASS"?"승인 완료":value==
 const decisionClass=(value?:string|null)=>value==="PASS"?"passed":value==="CONDITIONAL_PASS"?"conditional":value==="REJECT"?"rejected":value==="DEFER"?"deferred":value==="review"||value==="REVIEW"?"review":"planned";
 const severityLabel=(value?:string)=>value==="critical"?"심각":value==="high"?"높음":value==="medium"?"보통":"낮음";
 const delayedTask=(task:Task)=>task.status!=="completed"&&Boolean(task.plannedEnd)&&task.plannedEnd!<new Date().toISOString().slice(0,10);
-const projectPlanProgress=(tasks:Task[],today=new Date().toLocaleDateString("sv-SE"))=>{
-  const dateDay=(value?:string)=>{if(!value||!/^\d{4}-\d{2}-\d{2}$/.test(value))return null;const time=Date.parse(value+"T00:00:00Z");return Number.isFinite(time)&&new Date(time).toISOString().slice(0,10)===value?time/86400000:null;};
-  const day=dateDay(today);if(day===null||!tasks.length)return null;
-  const planned=tasks.map(task=>{const start=dateDay(task.plannedStart),end=dateDay(task.plannedEnd);if(start===null||end===null||end<start)return null;return Math.max(0,Math.min(1,(day-start+1)/(end-start+1)))*100;});
-  return planned.every(value=>value!==null)?Math.round(planned.reduce<number>((sum,value)=>sum+(value??0),0)/planned.length):null;
-};
+
 
 function GateFlow({gates,onOpen}:{gates:Gate[];onOpen?:(taskId:string)=>void}){
   const items=["G1","G2","G3","G4","G5","G6"].map(code=>gates.find(item=>item.gateCode===code)||{taskId:code,gateCode:code,name:code+" Gate",status:"planned",progress:0,decision:null,activityCount:0,completedActivityCount:0,missingRequiredDeliverables:0,openGateIssues:0});
