@@ -1,10 +1,11 @@
+.project-plm-view.project-deliverables-view { padding-top: 8px; }
 .project-deliverables-summary {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 16px;
-  margin-bottom: 10px;
-  min-height: var(--v2-wbs-row-height);
+  margin-bottom: 6px;
+  min-height: var(--v2-action-height);
   font-size: var(--v2-font-size-caption);
 }
 .project-deliverables-summary > b {
