@@ -1,0 +1,91 @@
+"use client";
+
+import {useCallback,useEffect,useMemo,useRef,useState,type FormEvent} from "react";
+import {Download,Filter,Plus,RefreshCw,Search} from "lucide-react";
+import {CommonProjectSelector} from "./common-project-selector";
+import {V2ListTable,type V2ListColumn} from "./v2-list-table";
+import {useColumnFilters} from "./use-column-filters";
+import {FilterChipGroup,FilterDateRange,FilterSection,type WorkspaceFilterConfig} from "./workspace-filter-panel";
+import {SystemSettingsPanel} from "./system-settings-panel";
+import {downloadAiArtifact} from "../ai-artifact-download";
+import type {ArtifactPreviewData} from "../artifact-preview-view";
+import type {V2Project} from "./project-workspaces";
+import {buildReportDraft,reportContextLimit,type ReportDraftInput} from "../../lib/report-draft";
+import {reportLabels,type ReportKind,type ReportResult} from "../../lib/report-results";
+import "./reports-workspace.css";
+
+export type ReportAiRequest=ReturnType<typeof buildReportDraft>&{autoSend?:boolean};
+type Props={project:V2Project|null;projects:V2Project[];onProjectChange:(project:V2Project)=>void;onAi:(request:ReportAiRequest)=>void;onPreview:(data:ArtifactPreviewData)=>void;onOpenFilter:(config:WorkspaceFilterConfig)=>void};
+const dateValue=(date:Date)=>`${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,"0")}-${String(date.getDate()).padStart(2,"0")}`;
+const createdDate=(row:ReportResult)=>dateValue(new Date(row.createdAt*1000));
+const formatDate=(value:number)=>new Date(value*1000).toLocaleString("ko-KR",{year:"numeric",month:"2-digit",day:"2-digit",hour:"2-digit",minute:"2-digit"});
+const emptyFilters={kinds:[] as string[],authors:[] as string[],from:"",to:""};
+
+export function ReportsWorkspace({project,projects,onProjectChange,onAi,onPreview,onOpenFilter}:Props){
+  const [items,setItems]=useState<ReportResult[]>([]),[projectId,setProjectId]=useState(project?.id||""),[query,setQuery]=useState("");
+  const [filters,setFilters]=useState(emptyFilters),[loading,setLoading]=useState(true),[error,setError]=useState(""),[hasMore,setHasMore]=useState(false),[nextOffset,setNextOffset]=useState(0),[opening,setOpening]=useState("");
+  const [creating,setCreating]=useState(false),[kind,setKind]=useState<ReportKind>("weekly"),[draftProjectId,setDraftProjectId]=useState(project?.id||"");
+  const [from,setFrom]=useState(()=>{const date=new Date();date.setDate(date.getDate()-6);return dateValue(date)}),[to,setTo]=useState(()=>dateValue(new Date()));
+  const [included,setIncluded]=useState({tasks:true,actuals:true,issues:true,deliverables:true,baseline:true});
+  const [preparing,setPreparing]=useState(false),[prepared,setPrepared]=useState<ReportAiRequest|null>(null),[prepareError,setPrepareError]=useState("");
+  const generation=useRef(0),preparation=useRef<AbortController|null>(null);
+  const load=useCallback(async(offset=0)=>{
+    const key=++generation.current;setLoading(true);setError("");
+    try{const response=await fetch(`/api/reports?offset=${offset}`,{cache:"no-store"}),data=await response.json();if(!response.ok)throw new Error(data.error||"보고서를 불러오지 못했습니다.");if(key!==generation.current)return;setItems(current=>offset?[...current,...(data.reports??[]).filter((row:ReportResult)=>!current.some(item=>item.id===row.id))]:data.reports??[]);setHasMore(Boolean(data.hasMore));setNextOffset(data.nextOffset||0)}catch(reason){if(key===generation.current)setError(reason instanceof Error?reason.message:"보고서를 불러오지 못했습니다.")}finally{if(key===generation.current)setLoading(false)}
+  },[]);
+  useEffect(()=>{void load();const refresh=()=>void load();window.addEventListener("jsolution-ai-conversation-updated",refresh);return()=>{generation.current++;preparation.current?.abort();window.removeEventListener("jsolution-ai-conversation-updated",refresh)}},[load]);
+  useEffect(()=>{setProjectId(project?.id||"")},[project?.id]);
+  const chooseProject=(id:string)=>{setProjectId(id);const next=projects.find(item=>item.id===id);if(next)onProjectChange(next)};
+  const columnFilters=useColumnFilters(items,[{key:"project",label:"프로젝트",value:row=>row.projectName},{key:"kind",label:"보고 유형",value:row=>reportLabels[row.kind]},{key:"period",label:"보고 기간",value:row=>row.period},{key:"author",label:"작성자",value:row=>row.author},{key:"created",label:"생성일",date:true,value:createdDate}]);
+  const filterRows=(value:typeof emptyFilters)=>items.filter(row=>(!projectId||row.projectId===projectId)&&(!query.trim()||`${row.title} ${row.projectCode} ${row.projectName} ${row.author} ${reportLabels[row.kind]}`.toLowerCase().includes(query.trim().toLowerCase()))&&(!value.kinds.length||value.kinds.includes(row.kind))&&(!value.authors.length||value.authors.includes(row.author))&&(!value.from||createdDate(row)>=value.from)&&(!value.to||createdDate(row)<=value.to));
+  const visible=filterRows(filters).filter(columnFilters.matches),activeCount=filters.kinds.length+filters.authors.length+Number(Boolean(filters.from||filters.to));
+  const openFilters=()=>{
+    let draft={...filters,kinds:[...filters.kinds],authors:[...filters.authors]};
+    const update=()=>onOpenFilter({eyebrow:"REPORT FILTER",title:"보고 · 회의 필터",description:"저장된 결과의 보고 유형·작성자·생성일을 선택합니다.",resultCount:filterRows(draft).length,activeCount:draft.kinds.length+draft.authors.length+Number(Boolean(draft.from||draft.to)),onApply:()=>setFilters(draft),onCancel:()=>{},onReset:()=>{draft={...emptyFilters};update()},content:<><FilterSection title="보고 유형"><FilterChipGroup options={Object.entries(reportLabels).map(([value,label])=>({value,label}))} selected={draft.kinds} onToggle={value=>{draft={...draft,kinds:draft.kinds.includes(value)?draft.kinds.filter(item=>item!==value):[...draft.kinds,value]};update()}}/></FilterSection><FilterSection title="작성자"><FilterChipGroup options={Array.from(new Set(items.map(item=>item.author))).map(value=>({value,label:value}))} selected={draft.authors} onToggle={value=>{draft={...draft,authors:draft.authors.includes(value)?draft.authors.filter(item=>item!==value):[...draft.authors,value]};update()}}/></FilterSection><FilterSection title="생성일"><FilterDateRange label="생성일" from={draft.from} to={draft.to} onFrom={from=>{draft={...draft,from};update()}} onTo={to=>{draft={...draft,to};update()}}/></FilterSection></>});update();
+  };
+  const openResult=async(row:ReportResult,download=false)=>{
+    if(opening)return;setOpening(row.id);setError("");
+    try{const response=await fetch(`/api/reports?id=${encodeURIComponent(row.id)}`,{cache:"no-store"}),data=await response.json();if(!response.ok)throw new Error(data.error||"보고서를 열지 못했습니다.");const saved=data.reports?.[0] as ReportResult|undefined;if(!saved?.content)throw new Error("저장된 보고서 본문이 없습니다.");const fileBase=`${saved.projectCode}-${reportLabels[saved.kind]}-${createdDate(saved)}`;if(download)downloadAiArtifact(saved.format,saved.content,fileBase);else onPreview({type:saved.format,content:saved.content,title:saved.title,fileBase})}catch(reason){setError(reason instanceof Error?reason.message:"보고서를 열지 못했습니다.")}finally{setOpening("")}
+  };
+  const closeCreate=()=>{preparation.current?.abort();setCreating(false);setPreparing(false);setPrepared(null);setPrepareError("")};
+  const prepare=async(event:FormEvent<HTMLFormElement>)=>{
+    event.preventDefault();if(preparing)return;
+    if(prepared){onAi({...prepared,autoSend:true});closeCreate();return}
+    const selected=projects.find(item=>item.id===draftProjectId);if(!selected||!from||!to||from>to||!Object.values(included).some(Boolean)){setPrepareError("프로젝트·보고 기간과 포함할 자료를 확인해 주세요.");return}
+    const controller=new AbortController();preparation.current=controller;setPreparing(true);setPrepareError("");
+    const read=async(url:string)=>{const response=await fetch(url,{cache:"no-store",signal:controller.signal}),data=await response.json();if(!response.ok)throw new Error(data.error||"선택한 자료를 불러오지 못했습니다.");return data};
+    try{
+      const [wbs,actuals,issues,deliverables,baseline]=await Promise.all([
+        included.tasks?read(`/api/projects/${selected.id}/wbs`):null,
+        included.actuals?read(`/api/reports/actuals?projectId=${encodeURIComponent(selected.id)}&from=${from}&to=${to}`):null,
+        included.issues?read(`/api/projects/${selected.id}/issues`):null,
+        included.deliverables?read(`/api/deliverables?projectId=${encodeURIComponent(selected.id)}`):null,
+        included.baseline?read(`/api/projects/${selected.id}/baseline`):null,
+      ]);
+      if(controller.signal.aborted)return;
+      setPrepared(buildReportDraft({project:selected,kind,from,to,...(wbs?{tasks:wbs.tasks}:{}),...(actuals?{actuals}:{}),...(issues?{issues:issues.issues}:{}),...(deliverables?{deliverables:deliverables.deliverables}:{}),...(baseline?{baseline}: {})} as ReportDraftInput));
+    }catch(reason){if(!controller.signal.aborted)setPrepareError(reason instanceof Error?reason.message:"자료를 준비하지 못했습니다.")}finally{if(!controller.signal.aborted)setPreparing(false)}
+  };
+  const columns:V2ListColumn[]=useMemo(()=>[
+    {key:"project",label:"프로젝트",width:210,header:columnFilters.heading("project")},
+    {key:"kind",label:"보고 유형",width:150,header:columnFilters.heading("kind")},
+    {key:"title",label:"보고서명",width:260,grow:true},
+    {key:"period",label:"보고 기간",width:205,header:columnFilters.heading("period")},
+    {key:"author",label:"작성자",width:100,header:columnFilters.heading("author")},
+    {key:"created",label:"생성일",width:150,header:columnFilters.heading("created")},
+    {key:"open",label:"파일",width:70},
+  ],[columnFilters]);
+  return <section className="wv2-module wv2-reports-workspace">
+    <header className="wv2-module-head"><div className="wv2-module-head-main"><small>REPORT · MEETING</small><div className="wv2-module-title-row"><h1>보고 · 회의</h1><p>주간보고서·회의 안건·Baseline 분석의 저장된 결과를 조회하고 활용합니다.</p></div></div><button className="primary" disabled={!projects.length} onClick={()=>{setDraftProjectId(projectId||project?.id||projects[0]?.id||"");setPrepared(null);setPrepareError("");setCreating(true)}}><Plus size={18}/>AI 보고서 작성</button></header>
+    <div className="wv2-module-toolbar"><label><Search size={18}/><input aria-label="보고서 검색" value={query} onChange={event=>setQuery(event.target.value)} placeholder="보고서명 · 프로젝트 · 작성자 검색"/></label><button onClick={openFilters}><Filter size={18}/>상세 필터{activeCount>0&&<b>{activeCount}</b>}</button><CommonProjectSelector compact projects={projects} value={projectId} onChange={chooseProject} showLabel={false}/><button disabled={loading} onClick={()=>void load()} aria-label="보고서 새로고침"><RefreshCw size={18}/></button><span>{visible.length}개 결과</span></div>
+    {error&&<p className="wv2-module-notice" role="alert">{error}</p>}
+    <V2ListTable label="보고 · 회의 결과 목록" columns={columns} empty={!visible.length?(loading?"저장된 보고서를 불러오는 중…":error?"보고서 조회에 실패했습니다. 새로고침으로 다시 시도해 주세요.":items.length?"조회 조건에 맞는 결과가 없습니다.":"저장된 보고서가 없습니다. AI 보고서 작성에서 새 결과를 만들 수 있습니다."):undefined} footer={hasMore&&<div className="wv2-reports-more"><button disabled={loading} onClick={()=>void load(nextOffset)}>{loading?"불러오는 중…":"다음 결과 불러오기"}</button></div>}>
+      {visible.map(row=><tr key={row.id}><td><span className="v2-list-cell">{row.projectName}</span><small>{row.projectCode}</small></td><td>{reportLabels[row.kind]}</td><td><button className="v2-list-name" disabled={Boolean(opening)} onClick={()=>void openResult(row)}><b>{row.title}</b><small>{row.format==="pptx"?"PPT 슬라이드":"문서"} 미리보기</small></button></td><td>{row.period}</td><td>{row.author}</td><td>{formatDate(row.createdAt)}</td><td><button className="v2-list-open" disabled={Boolean(opening)} title="다운로드" aria-label={`${row.title} 다운로드`} onClick={()=>void openResult(row,true)}><Download size={18}/></button></td></tr>)}
+    </V2ListTable>
+    <p className="wv2-reports-note">현재 계정에 저장된 AI 보고 결과입니다. 목록 조회·미리보기·다운로드는 AI를 다시 호출하지 않습니다.</p>
+    {creating&&<SystemSettingsPanel title={prepared?"AI 전송 자료 확인":"AI 보고서 작성"} kicker="REPORT · MEETING" description={prepared?"아래 요약을 확인한 뒤 AI 작성을 실행하세요.":"보고 기간과 필요한 자료를 선택하세요. 문서 원문은 전송하지 않습니다."} onClose={closeCreate} onSubmit={prepare} saving={preparing} submitLabel={prepared?"AI 작성":"전송 자료 확인"}>
+      {prepared?<><p>{prepared.contextItems[0].meta.length.toLocaleString()}자 / 최대 {reportContextLimit.toLocaleString()}자 · 문서 원문 0개</p><pre className="wv2-reports-context">{prepared.contextItems[0].meta}</pre><div className="wv2-reports-more"><button type="button" onClick={()=>setPrepared(null)}>작성 조건 변경</button></div></>:<><CommonProjectSelector projects={projects} value={draftProjectId} onChange={setDraftProjectId} allowAll={false} allLabel="프로젝트 선택"/><label><span>보고 유형</span><select value={kind} onChange={event=>setKind(event.target.value as ReportKind)}>{Object.entries(reportLabels).map(([value,label])=><option key={value} value={value}>{label}</option>)}</select></label><div className="two"><label><span>보고 시작일</span><input required type="date" value={from} max={to} onChange={event=>setFrom(event.target.value)}/></label><label><span>보고 종료일</span><input required type="date" value={to} min={from} onChange={event=>setTo(event.target.value)}/></label></div><fieldset><legend>포함할 자료</legend>{([{key:"tasks",label:"현재 업무·진척 요약"},{key:"actuals",label:"보고 기간의 실적"},{key:"issues",label:"열린 이슈·담당자"},{key:"deliverables",label:"산출물 등록·미등록 요약"},{key:"baseline",label:"Baseline 변경·지연 요약"}] as const).map(item=><label className="check" key={item.key}><input type="checkbox" checked={included[item.key]} onChange={event=>setIncluded(current=>({...current,[item.key]:event.target.checked}))}/>{item.label}</label>)}</fieldset><p>자료 확인 단계에서는 AI를 호출하지 않습니다. 최종 ‘AI 작성’을 누르면 선택한 요약 자료로 한 번 요청합니다.</p></>}
+      {prepareError&&<p className="wv2-module-notice" role="alert">{prepareError}</p>}
+    </SystemSettingsPanel>}
+  </section>;
+}

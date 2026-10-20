@@ -7,7 +7,7 @@ import {artifactLabel,detectAiArtifactType,downloadAiArtifact,type AiArtifactTyp
 import {saveAiArtifactResult} from "../ai-artifact-library";
 
 export type ContextItem={id?:string;kind?:string;title?:string;meta?:string;fileName?:string;revision?:number;fileAttached?:boolean};
-export type AiDraftRequest={key:number;prompt?:string;contextItems?:ContextItem[];source?:string};
+export type AiDraftRequest={key:number;prompt?:string;contextItems?:ContextItem[];source?:string;autoSend?:boolean};
 type ChatMessage={id?:string;role:"user"|"assistant";content:string;createdAt?:number;artifactType?:AiArtifactType};
 type Conversation={id:string;title:string;source:string;contextType:string;contextTitle:string;contextItems:ContextItem[];groupName?:string;updatedAt:number};
 type SearchResult={id:string;kind:"project"|"task"|"document"|"issue";projectId:string;taskId?:string;eyebrow:string;title:string;meta:string};

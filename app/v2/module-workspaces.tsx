@@ -7,5 +7,5 @@ const lazyNamed=(loader:()=>Promise<{default:ComponentType<any>}>)=>{
   return (props:any)=><Suspense fallback={null}><Component {...props}/></Suspense>;
 };
 
-export const ReportsWorkspace=lazyNamed(()=>import("./module-workspaces-impl").then(module=>({default:module.ReportsWorkspace})));
-export type {ReportAiRequest} from "./module-workspaces-impl";
+export const ReportsWorkspace=lazyNamed(()=>import("./reports-workspace").then(module=>({default:module.ReportsWorkspace})));
+export type {ReportAiRequest} from "./reports-workspace";
