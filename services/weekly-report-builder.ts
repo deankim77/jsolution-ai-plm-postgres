@@ -19,9 +19,27 @@ export function buildWeeklyReport(data:WeeklyReportData,from:string,to:string,to
   const slides:{title:string;body:string}[]=[];
   const push=(title:string,rows:string[])=>{
     const lines=rows.length?rows:["없음"];
-    // Keep dates, names and units together; long records continue on the next slide.
-    const wrapped=lines.flatMap(line=>{let rest=text(line);const result:string[]=[];while(rest.length>44){const space=rest.lastIndexOf(" ",44),end=space>=20?space:44;result.push(rest.slice(0,end));rest=rest.slice(end).trimStart()}result.push(rest);return result});
-    for(let start=0;start<wrapped.length;start+=12)slides.push({title:`${title}${start?" (계속)":""}`,body:[`${project.name} · ${from} ~ ${to}`, ...wrapped.slice(start,start+12)].join("\n")});
+    // Paragraphs remain intact. Width estimates are used only for page breaks,
+    // not to inject newlines into dates, names or prose. The slide renderer wraps text.
+    const width=(value:string)=>Array.from(value).reduce((sum,char)=>sum+(/\s/.test(char)?0.35:char.charCodeAt(0)<128?0.65:1),0);
+    const visualLines=(value:string)=>{
+      const result:string[]=[];let rest=value;
+      while(rest){
+        let end=0,used=0,lastSpace=0;
+        for(const char of rest){const next=width(char);if(used+next>45)break;used+=next;end+=char.length;if(/\s/.test(char))lastSpace=end}
+        if(end<rest.length&&lastSpace>0)end=lastSpace;
+        end=Math.max(1,end);result.push(rest.slice(0,end));rest=rest.slice(end);
+      }
+      return result.length?result:[""];
+    };
+    let paragraphs:string[]=[],used=0,page=0;
+    const flush=()=>{if(!paragraphs.length)return;slides.push({title:`${title}${page++?" (계속)":""}`,body:[`${project.name} · ${from} ~ ${to}`,...paragraphs].join("\n")});paragraphs=[];used=0};
+    for(const line of lines){
+      const paragraph=text(line),estimated=visualLines(paragraph);
+      if(estimated.length<=12){if(used+estimated.length>12)flush();paragraphs.push(paragraph);used+=estimated.length}
+      else{flush();for(let start=0;start<estimated.length;start+=12){paragraphs=[estimated.slice(start,start+12).join("")];used=Math.min(12,estimated.length-start);flush()}}
+    }
+    flush();
   };
   const inWeek=(date?:string|null)=>Boolean(date&&date>=from&&date<=to);
   const done=(task:Task)=>task.status==="completed";

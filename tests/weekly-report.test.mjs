@@ -45,3 +45,11 @@ test("주간보고 저장은 같은 트랜잭션에 회사·사용자 문맥과 
  const repository=compile("db/repositories/weekly-report-repository.ts",{"drizzle-orm":require("drizzle-orm"),"../index":{getDb:()=>({transaction:async callback=>{transactions++;return callback({insert:table=>({values:async values=>{writes.push([table,values])}})})}})},"../schema":schema});
  const id=await repository.saveWeeklyReport({companyId:"company-a",userId:"dean"},{id:"p",name:"보험"},"2026-10-19","2026-10-25","슬라이드 1: 전체 본문");assert.equal(transactions,1);assert.equal(writes[0][1].companyId,"company-a");assert.equal(writes[0][1].userId,"dean");assert.match(writes[0][1].source,/AI 미사용/);assert.equal(writes[1][1][1].id,id);assert.equal(writes[1][1][1].content,"슬라이드 1: 전체 본문");assert.equal(writes[1][1][1].conversationId,writes[0][1].id);
 });
+test("줄바꿈은 항목 사이에만 넣고 기간·담당자·설명 문장을 글자 수로 자르지 않는다",()=>{
+ const input=data();input.issues[0].description="담당 부서가 보장 범위와 청구 기준을 검토하고 있으며 회신 후 약관에 반영할 예정입니다. ".repeat(4).trim();
+ const content=buildWeeklyReport(input,"2026-10-19","2026-10-25","2026-10-20");
+ assert.ok(content.includes("프로젝트 P / PM Dean / 전체 기간 2026-10-01 ~ 2026-11-30"));
+ assert.ok(content.includes("상태 기준일 2026-10-20 / 실적 조회 기간 2026-10-19 ~ 2026-10-25"));
+ assert.ok(content.includes("• old 업무 old / Dean / 2026-10-12 ~ 2026-10-14 / 진행 50%"));
+ assert.ok(content.includes("내용: "+input.issues[0].description));
+});
