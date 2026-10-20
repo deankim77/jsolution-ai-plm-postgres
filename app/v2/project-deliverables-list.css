@@ -1,0 +1,22 @@
+.project-deliverables-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 10px;
+  min-height: var(--v2-wbs-row-height);
+  font-size: var(--v2-font-size-caption);
+}
+.project-deliverables-summary > b {
+  font-size: var(--v2-font-size-card-title);
+  white-space: nowrap;
+}
+.project-deliverables-summary > div {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+.project-deliverables-summary span { white-space: nowrap; }
+.project-deliverables-summary strong { font-size: var(--v2-font-size-body); }
+.project-deliverables-list button:disabled { cursor: default; }
+.project-deliverables-list .v2-list-open:disabled { color: var(--v2-color-muted); }
