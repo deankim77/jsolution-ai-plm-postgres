@@ -48,7 +48,7 @@ export default function ProjectPlmTabsBridge({onActiveChange,onPreviewDocument,r
   useEffect(()=>{
     const attach=()=>{
       const nav=document.querySelector<HTMLElement>(".wv2-view-tabs"),canvas=document.querySelector<HTMLElement>(".wv2-canvas");
-      if(nav){let host=nav.querySelector<HTMLElement>(".project-plm-tab-host");if(!host){host=document.createElement("span");host.className="project-plm-tab-host";const edit=[...nav.querySelectorAll("button")].find(button=>button.textContent?.includes("WBS 편집"));nav.insertBefore(host,edit||null)}setTabHost(host)}else setTabHost(null);
+      if(nav){setTabHost(nav.querySelector<HTMLElement>(".project-plm-tab-host"))}else setTabHost(null);
       if(canvas){let host=canvas.querySelector<HTMLElement>(".project-plm-canvas-host");if(!host){host=document.createElement("div");host.className="project-plm-canvas-host";canvas.appendChild(host)}setCanvasHost(host)}else setCanvasHost(null);
     };
     attach();const observer=new MutationObserver(attach);observer.observe(document.body,{childList:true,subtree:true});return()=>observer.disconnect();
