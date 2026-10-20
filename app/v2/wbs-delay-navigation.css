@@ -1,0 +1,19 @@
+.wv2-delayed-task-link {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: inherit;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.wv2-delayed-task-link:focus-visible {
+  outline: 2px solid var(--v2-color-primary);
+  outline-offset: 4px;
+}

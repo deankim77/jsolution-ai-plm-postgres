@@ -141,6 +141,7 @@
 .wv2-portfolio-dashboard>.wv2-gate-customer-matrix>header>b,
 .wv2-portfolio-dashboard .health-score>b,
 .wv2-project-dashboard>.summary>article>span:first-child,
+.wv2-project-dashboard .wv2-delayed-task-link>span,
 .wv2-project-dashboard .wv2-production-summary>.wv2-production-overall>span:first-child,
 .wv2-project-dashboard .wv2-project-shortcuts>button b,
 .wv2-project-dashboard>.wv2-project-gate-panel>header>div>b,

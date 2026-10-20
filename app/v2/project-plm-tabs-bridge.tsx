@@ -32,7 +32,7 @@ const registered=(item:Deliverable,versions:Version[])=>Number(item.revisionCoun
 
 function findButton(root:ParentNode|null,label:string){return [...(root?.querySelectorAll<HTMLButtonElement>("button")||[])].find(button=>button.textContent?.trim().includes(label));}
 
-export default function ProjectPlmTabsBridge({onActiveChange,onPreviewDocument}:{onActiveChange?:(view:PlmView)=>void;onPreviewDocument?:(target:DocumentPreviewTarget)=>void}={}){
+export default function ProjectPlmTabsBridge({onActiveChange,onPreviewDocument,resetKey}:{onActiveChange?:(view:PlmView)=>void;onPreviewDocument?:(target:DocumentPreviewTarget)=>void;resetKey?:number}={}){
   const {features}=useFeatureSettings();
   useEffect(()=>{if(!features.drawings)setActive(value=>value==="drawings"?null:value);if(!features.partBom){setActive(value=>value==="bom"?null:value);setSelectedBom(null);}},[features.drawings,features.partBom]);
   const [tabHost,setTabHost]=useState<HTMLElement|null>(null),[canvasHost,setCanvasHost]=useState<HTMLElement|null>(null);
@@ -40,6 +40,8 @@ export default function ProjectPlmTabsBridge({onActiveChange,onPreviewDocument}:
   const [active,setActive]=useState<PlmView>(null),[project,setProject]=useState<Project|null>(null),[tasks,setTasks]=useState<Task[]>([]);
   const [deliverables,setDeliverables]=useState<Deliverable[]>([]),[versions,setVersions]=useState<Version[]>([]),[parts,setParts]=useState<Part[]>([]),[bom,setBom]=useState<BomRow[]>([]);
   const [loading,setLoading]=useState(false),[error,setError]=useState(""),[selectedBom,setSelectedBom]=useState<BomGroup|null>(null);
+
+  useEffect(()=>{setActive(null)},[resetKey]);
 
   useEffect(()=>{onActiveChange?.(tabHost?active:null)},[active,tabHost,onActiveChange]);
 
