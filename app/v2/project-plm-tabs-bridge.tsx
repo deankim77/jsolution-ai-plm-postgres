@@ -13,7 +13,7 @@ type Deliverable={id:string;taskId?:string;name:string;type?:string;required?:nu
 type Version={deliverableId:string;fileName:string;revision:number};
 type BomRow={parentPartId:string;parentNumber:string;parentName:string;childPartId:string;childNumber:string;childName:string;quantity:number;unit:string;note?:string};
 type Part={id:string;partNumber:string;name:string;partType:string;revision:string;status:string;rollupCost?:number};
-type PlmView="deliverables"|"drawings"|"bom"|null;
+export type PlmView="deliverables"|"drawings"|"bom"|null;
 
 type BomGroup={id:string;number:string;name:string;children:BomRow[];level:number;rollupCost:number};
 
@@ -28,7 +28,7 @@ const registered=(item:Deliverable,versions:Version[])=>Number(item.revisionCoun
 
 function findButton(root:ParentNode|null,label:string){return [...(root?.querySelectorAll<HTMLButtonElement>("button")||[])].find(button=>button.textContent?.trim().includes(label));}
 
-export default function ProjectPlmTabsBridge(){
+export default function ProjectPlmTabsBridge({onActiveChange}:{onActiveChange?:(view:PlmView)=>void}={}){
   const {features}=useFeatureSettings();
   useEffect(()=>{if(!features.drawings)setActive(value=>value==="drawings"?null:value);if(!features.partBom){setActive(value=>value==="bom"?null:value);setSelectedBom(null);}},[features.drawings,features.partBom]);
   const [tabHost,setTabHost]=useState<HTMLElement|null>(null),[canvasHost,setCanvasHost]=useState<HTMLElement|null>(null);
@@ -36,6 +36,8 @@ export default function ProjectPlmTabsBridge(){
   const [active,setActive]=useState<PlmView>(null),[project,setProject]=useState<Project|null>(null),[tasks,setTasks]=useState<Task[]>([]);
   const [deliverables,setDeliverables]=useState<Deliverable[]>([]),[versions,setVersions]=useState<Version[]>([]),[parts,setParts]=useState<Part[]>([]),[bom,setBom]=useState<BomRow[]>([]);
   const [loading,setLoading]=useState(false),[error,setError]=useState(""),[selectedBom,setSelectedBom]=useState<BomGroup|null>(null);
+
+  useEffect(()=>{onActiveChange?.(tabHost?active:null)},[active,tabHost,onActiveChange]);
 
   useEffect(()=>{
     const attach=()=>{

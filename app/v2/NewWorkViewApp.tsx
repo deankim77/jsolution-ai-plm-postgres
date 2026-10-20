@@ -21,6 +21,7 @@ import {FilterChipGroup,FilterSection,FilterText,WorkspaceFilterContent,type Wor
 import {AiSelectionBar} from "./ai-context-selection";
 import {UserAvatar} from "./user-avatar";
 import GlobalRail from "./global-rail";
+import type {PlmView} from "./project-plm-tabs-bridge";
 import {EcrWorkspace,MyWorkWorkflowWorkspace,ProjectWorkflowWorkspace,QualityWorkspace,SourceCreateWorkspace,WorkflowCreateWorkspace,WorkflowTemplateWorkspace} from "./workflow-workspaces";
 import {
   AdvancedGanttView,AdvancedWbsEditor,ArtifactPreviewView,DocumentPreviewSession,BomCompareWorkspace,ConnectedAiPanel,ContinuingAiHomeWorkspace,CostManagementWorkspace,
@@ -91,6 +92,8 @@ export default function NewWorkViewApp(){
   const [loading,setLoading]=useState(true);
   const [loadError,setLoadError]=useState("");
   const [view,setView]=useState<WorkView>("list");
+  const [projectPlmView,setProjectPlmView]=useState<PlmView>(null);
+  const showWbsToolbar=projectPlmView===null&&["list","timeline","gantt","edit"].includes(view);
   const [contextOpen,setContextOpen]=useState(true);
   const [selectedId,setSelectedId]=useState("");
   const [panelOpen,setPanelOpen]=useState(false);
@@ -107,6 +110,7 @@ export default function NewWorkViewApp(){
   const [sortDirection,setSortDirection]=useState<"asc"|"desc">("asc");
   const [visibleColumns,setVisibleColumns]=useState<Set<ColumnKey>>(new Set(defaultColumns));
   const [toolbarMenu,setToolbarMenu]=useState<"sort"|"columns"|null>(null);
+  useEffect(()=>{if(!showWbsToolbar)setToolbarMenu(null)},[showWbsToolbar]);
   const [saving,setSaving]=useState(false);
   const [saveNotice,setSaveNotice]=useState("");
   const [statusSaving,setStatusSaving]=useState(false);
@@ -288,7 +292,7 @@ export default function NewWorkViewApp(){
   const activeWorkspace=workspaceTabs.find(item=>item.key===activeWorkspaceTab);
 
   return <main className={`wv2 ${contextOpen?"context-open":""} ${panelOpen?"panel-open":""}`}>
-    <GlobalRail onSearch={()=>setGlobalOpen(true)} onView={setWorkspaceView} active={workspaceView} />
+    <GlobalRail onSearch={()=>setGlobalOpen(true)} onView={setWorkspaceView} active={workspaceView} onProjectPlmViewChange={setProjectPlmView} />
      {contextOpen&&<ContextNav project={project} projects={projects} user={sessionUser} active={workspaceView} onView={setWorkspaceView} onProject={next=>{setProject(next);setSelectedId("");setPanelOpen(false);if(workspaceView==="wbs")openWorkspaceTab({key:`wbs:${next.id}`,view:"wbs",entityId:next.id,title:`WBS · ${next.name}`})}} onClose={()=>setContextOpen(false)}/>}
     <section className="wv2-workspace">
       <header className="wv2-topbar">
@@ -335,13 +339,13 @@ export default function NewWorkViewApp(){
         <nav className="wv2-view-tabs" aria-label="Work View">
           {viewTabs.map(([key,label,Icon])=><button key={key} disabled={key==="edit"&&project.status!=="preparing"} className={view===key?"active":""} onClick={()=>setView(key)}><Icon size={18}/>{label}</button>)}
         </nav>
-        <div className="wv2-toolbar">
+        {showWbsToolbar&&<div className="wv2-toolbar">
           <button className="wv2-add" disabled={project.status!=="preparing"} onClick={()=>addTask()}><Plus size={18}/> 업무 추가 <ChevronDown size={18}/></button>
           <label><Search size={18}/><input value={query} onChange={event=>setQuery(event.target.value)} placeholder="WBS, 업무, 담당자 검색"/></label>
           <button className={filters.statuses.length||filters.assignee||filters.flags.length||filters.levels.length?"active":""} onClick={()=>openPanel("filter")}><Filter size={18}/> 필터{filters.statuses.length+filters.flags.length+filters.levels.length>0&&<em>{filters.statuses.length+filters.flags.length+filters.levels.length}</em>}</button><div className="wv2-toolbar-menu"><button onClick={()=>setToolbarMenu(current=>current==="sort"?null:"sort")}><SlidersHorizontal size={18}/> 정렬</button>{toolbarMenu==="sort"&&<div className="popover"><b>정렬 기준</b>{([['order','기본 Order'],['name','업무명'],['start','계획 시작'],['end','계획 종료'],['progress','진척률'],['status','상태']] as const).map(([key,label])=><button className={sortKey===key?"active":""} key={key} onClick={()=>{if(sortKey===key)setSortDirection(value=>value==="asc"?"desc":"asc");else{setSortKey(key);setSortDirection("asc")}}}>{label}<span>{sortKey===key?(sortDirection==="asc"?"↑":"↓"):""}</span></button>)}</div>}</div><div className="wv2-toolbar-menu"><button onClick={()=>setToolbarMenu(current=>current==="columns"?null:"columns")}><Columns3 size={18}/> 표시 열</button>{toolbarMenu==="columns"&&<div className="popover columns"><b>표시할 열</b>{([['type','구분'],['start','계획 시작'],['end','계획 종료'],['assignee','담당'],['deliverables','산출물'],['issues','이슈'],['progress','진척률'],['status','상태'],['actual','실적']] as const).map(([key,label])=><label key={key}><input type="checkbox" checked={visibleColumns.has(key)} onChange={()=>setVisibleColumns(current=>{const next=new Set(current);if(next.has(key))next.delete(key);else next.add(key);return next})}/>{label}</label>)}<button onClick={()=>setVisibleColumns(new Set(defaultColumns))}>기본값 복원</button></div>}</div>
           <span className="wv2-result-count">업무 {visible.length}건</span>
-        </div>
-        <section className="wv2-canvas">
+        </div>}
+        <section className="wv2-canvas" style={showWbsToolbar?undefined:{gridRow:"span 2"}}>
           {loading&&<div className="wv2-loading">프로젝트 데이터를 불러오는 중…</div>}
           {!loading&&loadError&&<div className="wv2-project-empty compact"><AlertTriangle size={28}/><h3>{loadError}</h3></div>}
           {!loading&&!loadError&&!tasks.length&&<div className="wv2-project-empty compact"><Workflow size={30}/><h3>등록된 WBS가 없습니다.</h3><p>업무 추가로 첫 WBS를 구성하세요.</p><button className="wv2-add" onClick={()=>addTask()}><Plus size={18}/> 업무 추가</button></div>}
