@@ -4,11 +4,13 @@ import * as schema from "./schema";
 import * as workflowPartSchema from "./workflow-part-schema";
 import * as workflowDrawingSchema from "./workflow-drawing-schema";
 
+import * as officePreviewSchema from "./office-preview-schema";
+
 const globalForDb = globalThis as typeof globalThis & {
   __aiPlmPgPool?: Pool;
 };
 
-const databaseSchema = { ...schema, ...workflowPartSchema, ...workflowDrawingSchema };
+const databaseSchema = { ...schema, ...workflowPartSchema, ...workflowDrawingSchema, ...officePreviewSchema };
 
 function getPool() {
   const connectionString = process.env.DATABASE_URL;
@@ -35,3 +37,4 @@ export function getDb() {
 export function getDbPool() {
   return getPool();
 }
+

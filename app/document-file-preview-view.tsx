@@ -1,4 +1,6 @@
 "use client";
+import OfficeDocumentPreview from "./office-document-preview";
+import {isOfficeDocument} from "../lib/office-preview.mjs";
 
 import { useEffect,useMemo,useState } from "react";
 import { Download,FileText,LoaderCircle } from "lucide-react";
@@ -26,6 +28,7 @@ export default function DocumentFilePreviewView({data}:{data:DocumentPreviewData
     let disposed=false;
     let objectUrl="";
     setState({kind:"loading"});
+    if(isOfficeDocument(data.fileName))return;
     fetch(`${fileUrl}&preview=1`,{cache:"no-store"}).then(async response=>{
       if(!response.ok){
         let message="파일 미리보기를 불러오지 못했습니다.";
@@ -44,7 +47,7 @@ export default function DocumentFilePreviewView({data}:{data:DocumentPreviewData
       if(!disposed)setState({kind:"blob",url:objectUrl,contentType:blob.type||contentType});
     }).catch(error=>{if(!disposed)setState({kind:"error",message:error instanceof Error?error.message:"파일 미리보기를 불러오지 못했습니다."});});
     return()=>{disposed=true;if(objectUrl)URL.revokeObjectURL(objectUrl);};
-  },[data.contentType,fileUrl]);
+  },[data.contentType,data.fileName,fileUrl]);
 
   return <div className="content document-native-preview-content">
     <section className="panel document-native-preview-workspace">
@@ -53,7 +56,7 @@ export default function DocumentFilePreviewView({data}:{data:DocumentPreviewData
         <a href={fileUrl}><Download size={16}/> 원본 다운로드</a>
       </header>
       <div className="document-native-preview-stage">
-        {state.kind==="loading"?<div className="document-native-preview-empty"><LoaderCircle size={28}/><strong>문서를 불러오는 중입니다.</strong></div>:
+        {isOfficeDocument(data.fileName)?<OfficeDocumentPreview key={data.versionId} projectId={data.projectId} versionId={data.versionId} title={data.title}/>:state.kind==="loading"?<div className="document-native-preview-empty"><LoaderCircle size={28}/><strong>문서를 불러오는 중입니다.</strong></div>:
         state.kind==="error"?<div className="document-native-preview-empty"><FileText size={30}/><strong>{state.message}</strong><p>원본 다운로드로 파일을 확인할 수 있습니다.</p></div>:
         state.kind==="text"?<article className="document-native-preview-paper"><h1>{data.title}</h1><div className="document-native-preview-rule"/><pre>{state.text}</pre><footer>JSOLUTION AI PMS · 등록 문서 미리보기</footer></article>:
         state.contentType.startsWith("image/")?<div className="document-native-image-preview"><img src={state.url} alt={data.title}/></div>:
@@ -63,3 +66,4 @@ export default function DocumentFilePreviewView({data}:{data:DocumentPreviewData
     </section>
   </div>;
 }
+
