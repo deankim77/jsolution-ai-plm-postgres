@@ -37,7 +37,7 @@ export default function OfficeDocumentPreview({projectId,versionId,title}:{proje
     finally{setRetrying(false)}
   };
   if(state.kind==="ready")return <iframe className="document-native-pdf-preview" src={`${url}&preview=1`} title={`${title} PDF 미리보기`}/>;
-  return <div className="wv2-preview-empty document-native-preview-empty" role="status" aria-live="polite">
+  return <div className="wv2-preview-empty document-native-preview-empty" style={{width:"100%",flex:1,minWidth:0}} role="status" aria-live="polite">
     {state.kind==="pending"?<RefreshCw size={24}/>:<FileText size={24}/>}
     <b>{state.kind==="pending"?"미리보기를 준비하고 있습니다.":state.kind==="failed"?"미리보기 생성에 실패했습니다.":"미리보기 상태를 확인하지 못했습니다."}</b>
     <p>{state.kind==="pending"?"원본 첨부는 완료되었습니다. PDF 변환이 끝나면 자동으로 표시됩니다.":state.message}</p>
