@@ -3,7 +3,7 @@ import path from "node:path";
 
 type StoragePutOptions={httpMetadata?:{contentType?:string};customMetadata?:Record<string,string>};
 export type StorageObject={body:ReadableStream<Uint8Array>;httpMetadata?:{contentType?:string};customMetadata?:Record<string,string>};
-export type StorageAdapter={put:(key:string,value:ReadableStream|ArrayBuffer|Blob|string,options?:StoragePutOptions)=>Promise<void>;get:(key:string)=>Promise<StorageObject|null>;delete:(key:string)=>Promise<void>};
+export type StorageAdapter={put:(key:string,value:ReadableStream|ArrayBuffer|Blob|string,options?:StoragePutOptions)=>Promise<void>;get:(key:string)=>Promise<StorageObject|null>;head?:(key:string)=>Promise<{size:number}|null>;delete:(key:string)=>Promise<void>};
 
 type StoredMetadata={contentType?:string;customMetadata?:Record<string,string>};
 
@@ -36,6 +36,10 @@ class LocalFileStorageAdapter implements StorageAdapter{
     await fs.writeFile(filePath,await toBuffer(value));
     const metadata:StoredMetadata={contentType:options?.httpMetadata?.contentType,customMetadata:options?.customMetadata};
     if(metadata.contentType||metadata.customMetadata)await fs.writeFile(metadataPath(filePath),JSON.stringify(metadata),"utf8");
+  }
+  async head(key:string){
+    try{const stat=await fs.stat(safePath(key));return stat.isFile()?{size:stat.size}:null}
+    catch(error:any){if(error?.code==="ENOENT")return null;throw error}
   }
   async get(key:string){
     const filePath=safePath(key);let data:Buffer;

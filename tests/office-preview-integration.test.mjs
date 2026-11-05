@@ -4,6 +4,7 @@ import fs from "node:fs/promises";
 import {randomUUID} from "node:crypto";
 import {execFileSync} from "node:child_process";
 import {convertOfficePdf} from "../services/office-pdf-converter.mjs";
+import {serveOfficePreview} from "../services/office-preview-service.mjs";
 
 test("PostgreSQL queue: duplicate requests, concurrent claims, lease recovery, stale fencing and retry",{skip:!process.env.OFFICE_PREVIEW_TEST_DATABASE_URL},async()=>{
   const {default:pg}=await import("pg");const {drizzle}=await import("drizzle-orm/node-postgres");
@@ -44,5 +45,29 @@ test("LibreOffice renders real DOCX, XLSX and PPTX into PDF",{skip:!process.env.
   for(const [name,base64] of Object.entries(fixture)){
     const pdf=await convertOfficePdf(Buffer.from(base64,"base64"),name,{executable:process.env.LIBREOFFICE_PATH||"soffice"});
     assert.equal(pdf.subarray(0,5).toString(),"%PDF-");assert.ok(pdf.length>500,name);
+    const version={fileName:name,conversionStatus:"office_pdf_ready",previewFileKey:"preview.pdf"};
+    let reads=0;
+    const storage={async head(){return {size:pdf.length}},async get(key){assert.equal(key,"preview.pdf");reads++;return {body:new Blob([pdf]).stream()}}};
+    const status=await serveOfficePreview({},storage,version,true);
+    assert.deepEqual(await status.json(),{state:"ready"});assert.equal(reads,0);
+    const preview=await serveOfficePreview({},storage,version);
+    assert.equal(preview.headers.get("content-type"),"application/pdf");
+    assert.deepEqual(Buffer.from(await preview.arrayBuffer()),pdf);assert.equal(reads,1);
   }
+});
+
+test("Document indexes migrate once on PostgreSQL, without HTTP schema changes",{skip:!process.env.OFFICE_PREVIEW_TEST_DATABASE_URL},async()=>{
+  const {default:pg}=await import("pg");
+  const schema=`preview_indexes_${randomUUID().replaceAll("-","")}`;
+  const admin=new pg.Pool({connectionString:process.env.OFFICE_PREVIEW_TEST_DATABASE_URL});
+  await admin.query(`CREATE SCHEMA ${schema}`);
+  const pool=new pg.Pool({connectionString:process.env.OFFICE_PREVIEW_TEST_DATABASE_URL,options:`-c search_path=${schema}`});
+  try{
+    await pool.query("CREATE TABLE deliverable_versions(deliverable_id text,revision integer,project_id text,task_id text,created_at integer)");
+    await pool.query("CREATE TABLE deliverables(drawing_company_id text,drawing_code text,project_id text,status text,created_at integer,category text)");
+    await pool.query("CREATE TABLE workflow_instances(main_deliverable_id text,status text,updated_at integer)");
+    const sql=(await fs.readFile(new URL("../drizzle-postgres/0008_document_preview_indexes.sql",import.meta.url),"utf8")).replaceAll("--> statement-breakpoint","");
+    await pool.query(sql);await pool.query(sql);
+    assert.equal((await pool.query("SELECT count(*)::integer AS count FROM pg_indexes WHERE schemaname=$1",[schema])).rows[0].count,7);
+  }finally{await pool.end();await admin.query(`DROP SCHEMA ${schema} CASCADE`);await admin.end()}
 });

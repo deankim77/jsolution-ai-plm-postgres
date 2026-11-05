@@ -11,20 +11,28 @@ export default function OfficeDocumentPreview({projectId,versionId,title}:{proje
   const url=`/api/projects/${encodeURIComponent(projectId)}/deliverables?versionId=${encodeURIComponent(versionId)}`;
   useEffect(()=>{
     const controller=new AbortController();let timer:ReturnType<typeof setTimeout>|undefined;
+    let checking=false,finished=false;
     setState({kind:"pending"});
     const check=async()=>{
+      clearTimeout(timer);
+      if(controller.signal.aborted||checking||finished||document.visibilityState==="hidden")return;
+      checking=true;
       try{
         const response=await fetch(`${url}&preview=1&previewStatus=1`,{cache:"no-store",signal:controller.signal});
         const data=await response.json();
         if(controller.signal.aborted)return;
         if(response.status===202&&data.state==="pending"){
-          setState({kind:data.conversionStatus==="office_pdf_converting"?"converting":"pending"});timer=setTimeout(check,3000);return;
+          setState({kind:data.conversionStatus==="office_pdf_converting"?"converting":"pending"});timer=setTimeout(check,5000);return;
         }
-        if(response.ok&&data.state==="ready"){setState({kind:"ready"});return}
+        if(response.ok&&data.state==="ready"){finished=true;setState({kind:"ready"});return}
+        finished=true;
         setState({kind:data.state==="failed"?"failed":"unavailable",message:data.error||"미리보기 상태를 확인하지 못했습니다."});
-      }catch(reason){if(!controller.signal.aborted)setState({kind:"unavailable",message:reason instanceof Error?reason.message:"미리보기 상태를 확인하지 못했습니다."})}
+      }catch(reason){if(!controller.signal.aborted){finished=true;setState({kind:"unavailable",message:reason instanceof Error?reason.message:"미리보기 상태를 확인하지 못했습니다."})}}
+      finally{checking=false}
     };
-    void check();return()=>{controller.abort();clearTimeout(timer)};
+    const visibilityChanged=()=>{if(document.visibilityState==="hidden")clearTimeout(timer);else void check()};
+    document.addEventListener("visibilitychange",visibilityChanged);
+    void check();return()=>{controller.abort();clearTimeout(timer);document.removeEventListener("visibilitychange",visibilityChanged)};
   },[url,attempt]);
   const retry=async()=>{
     if(state.kind==="unavailable"){setAttempt(value=>value+1);return}

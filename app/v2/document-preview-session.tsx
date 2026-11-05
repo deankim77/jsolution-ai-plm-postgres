@@ -10,6 +10,11 @@ export default function DocumentPreviewSession({target,onClose,onRegisterRevisio
   const [loading,setLoading]=useState(true),[error,setError]=useState(""),[reload,setReload]=useState(0),viewerRef=useRef<HTMLDivElement|null>(null);
   useEffect(()=>{
     const controller=new AbortController();setLoading(true);setError("");setDetail(null);setVersions([]);
+    const timeout=setTimeout(()=>{
+      controller.abort();
+      setError("산출물 정보 조회가 지연되고 있습니다. 잠시 후 다시 시도해 주세요.");
+      setLoading(false);
+    },20000);
     void fetch(`/api/deliverables?deliverableId=${encodeURIComponent(target.deliverableId)}`,{cache:"no-store",signal:controller.signal}).then(async response=>{
       const data=await response.json();if(!response.ok)throw new Error(data.error||"산출물을 불러오지 못했습니다.");
       if(!data.deliverable||data.deliverable.id!==target.deliverableId)throw new Error("산출물을 찾을 수 없습니다.");
@@ -17,8 +22,8 @@ export default function DocumentPreviewSession({target,onClose,onRegisterRevisio
       const history=(data.versions??[]) as DocumentPreviewVersion[];
       if(target.versionId&&!history.some(item=>item.id===target.versionId))throw new Error("선택한 Revision이 삭제되었거나 조회할 수 없습니다.");
       setDetail(data.deliverable);setVersions(history);setVersionId(target.versionId||history[0]?.id||"");
-    }).catch(reason=>{if(!controller.signal.aborted)setError(reason instanceof Error?reason.message:"산출물을 불러오지 못했습니다.")}).finally(()=>{if(!controller.signal.aborted)setLoading(false)});
-    return()=>controller.abort();
+    }).catch(reason=>{if(!controller.signal.aborted)setError(reason instanceof Error?reason.message:"산출물을 불러오지 못했습니다.")}).finally(()=>{clearTimeout(timeout);if(!controller.signal.aborted)setLoading(false)});
+    return()=>{clearTimeout(timeout);controller.abort()};
   },[target.deliverableId,target.versionId,reload]);
   useEffect(()=>{const refresh=()=>setReload(value=>value+1);window.addEventListener("v2-deliverables-updated",refresh);return()=>window.removeEventListener("v2-deliverables-updated",refresh)},[]);
   return <section className="wv2-module wv2-document-workspace"><div className="wv2-module-toolbar"><button onClick={onClose}><ArrowLeft size={18}/>업무로 돌아가기</button><span>{detail?.name||target.name} · 산출물 미리보기</span></div>
