@@ -52,8 +52,9 @@ jobs:
             if(errors.length)throw new Error(ts.formatDiagnosticsWithColorAndContext(errors,{getCanonicalFileName:x=>x,getCurrentDirectory:()=>process.cwd(),getNewLine:()=>String.fromCharCode(10)}));
           }
           JS
-      - run: node --test tests/office-preview.test.mjs tests/office-preview-polling.test.mjs tests/office-preview-integration.test.mjs
+      - run: node --test tests/office-preview.test.mjs tests/office-preview-polling.test.mjs tests/office-preview-integration.test.mjs tests/office-preview-animation.test.mjs
         env:
           OFFICE_PREVIEW_TEST_DATABASE_URL: postgres://postgres:preview_test@localhost:5432/preview_test
           OFFICE_PREVIEW_TEST_LIBREOFFICE: '1'
+          OFFICE_PREVIEW_TEST_BROWSER: google-chrome
           LIBREOFFICE_PATH: /usr/bin/soffice
