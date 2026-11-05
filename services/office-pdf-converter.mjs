@@ -7,6 +7,26 @@ import {pathToFileURL} from "node:url";
 import {isOfficeDocument} from "../lib/office-preview.mjs";
 
 const execute=promisify(execFile);
+function runOffice(executable,args,timeoutMs){
+  return new Promise((resolve,reject)=>{
+    let timedOut=false;
+    const child=execFile(executable,args,{windowsHide:true,detached:process.platform!=="win32",maxBuffer:1024*1024},error=>{
+      if(timedOut)return;
+      clearTimeout(timer);if(error)reject(error);else resolve(undefined);
+    });
+    const timer=setTimeout(async()=>{
+      timedOut=true;
+      try{
+        if(child.pid){
+          if(process.platform==="win32")await execute("taskkill.exe",["/PID",String(child.pid),"/T","/F"],{windowsHide:true,timeout:10000});
+          else process.kill(-child.pid,"SIGKILL");
+        }
+      }catch{/* The child may already have exited. */}
+      const error=new Error("미리보기 변환 제한 시간을 초과했습니다.");
+      reject(Object.assign(error,{killed:true}));
+    },timeoutMs);
+  });
+}
 export async function convertOfficePdf(buffer,fileName,{executable=process.env.LIBREOFFICE_PATH||"soffice",timeoutMs=120000,maxBytes=104857600}={}){
   if(!isOfficeDocument(fileName))throw new Error("지원하지 않는 오피스 파일 형식입니다.");
   if(!buffer.byteLength||buffer.byteLength>maxBytes)throw new Error("미리보기 변환 용량 제한을 초과했거나 빈 파일입니다.");
@@ -18,7 +38,7 @@ export async function convertOfficePdf(buffer,fileName,{executable=process.env.L
     // Never execute embedded macros or update external document links.
     await fs.writeFile(path.join(profile,"user","registrymodifications.xcu"),`<?xml version="1.0"?><oor:items xmlns:oor="http://openoffice.org/2001/registry"><item oor:path="/org.openoffice.Office.Common/Security/Scripting"><prop oor:name="MacroSecurityLevel" oor:op="fuse"><value>3</value></prop></item><item oor:path="/org.openoffice.Office.Common/Load"><prop oor:name="UpdateLinks" oor:op="fuse"><value>2</value></prop></item></oor:items>`);
     await fs.writeFile(input,buffer);
-    await execute(executable,[`-env:UserInstallation=${pathToFileURL(profile).href}`,"--headless","--nologo","--nodefault","--nofirststartwizard","--convert-to","pdf","--outdir",directory,input],{timeout:timeoutMs,windowsHide:true,maxBuffer:1024*1024});
+    await runOffice(executable,[`-env:UserInstallation=${pathToFileURL(profile).href}`,"--headless","--nologo","--nodefault","--nofirststartwizard","--convert-to","pdf","--outdir",directory,input],timeoutMs);
     const output=path.join(directory,"source.pdf"),info=await fs.stat(output);
     if(info.size>maxBytes)throw new Error("변환된 PDF가 미리보기 용량 제한을 초과했습니다.");
     const pdf=await fs.readFile(output);

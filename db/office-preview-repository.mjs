@@ -3,6 +3,10 @@ import {sql} from "drizzle-orm";
 // Every queue mutation is transactional. A lease token fences restarted/stale workers.
 export function officePreviewRepository(db) {
   return {
+    async recordEnqueueFailure(versionId, message) {
+      await db.execute(sql`UPDATE deliverable_versions SET conversion_status='office_pdf_failed',
+        conversion_error=${message} WHERE id=${versionId} AND deleted_at IS NULL`);
+    },
     async enqueue(versionId, retry = false) {
       return db.transaction(async tx => {
         const result = await tx.execute(sql`INSERT INTO office_preview_jobs (version_id)
