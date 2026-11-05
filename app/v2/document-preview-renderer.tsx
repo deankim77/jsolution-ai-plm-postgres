@@ -1,4 +1,6 @@
 "use client";
+import OfficeDocumentPreview from "../office-document-preview";
+import {isOfficeDocument} from "../../lib/office-preview.mjs";
 
 /* eslint-disable @next/next/no-img-element */
 import {useEffect,useState,type CSSProperties,type RefObject} from "react";
@@ -73,7 +75,7 @@ export default function DocumentPreviewRenderer({projectId,tab,item,versions,onV
       ?"pdf"
       :lower.endsWith(".dwg")
         ?"dwg"
-        :/\.(docx|pptx|xlsx|txt|csv|json|xml|md)$/i.test(lower)||version?.contentType?.startsWith("text/")
+        :isOfficeDocument(lower)?"office":/\.(txt|csv|json|xml|md)$/i.test(lower)||version?.contentType?.startsWith("text/")
           ?"text"
           :"unsupported";
 
@@ -143,9 +145,10 @@ export default function DocumentPreviewRenderer({projectId,tab,item,versions,onV
       :error?<div className="wv2-preview-empty wv2-preview-error"><FileText size={24}/><b>{error.message}</b><span>{error.downloadAvailable?"원본 파일은 정상이며 다운로드하여 확인할 수 있습니다.":"파일 등록 상태를 확인한 뒤 다시 시도해 주세요."}</span><div><button onClick={()=>setReloadKey(value=>value+1)}><RefreshCw size={18}/>다시 시도</button>{error.downloadAvailable&&<a href={download} download><Download size={18}/>원본 다운로드</a>}</div></div>
       :kind==="image"?<div className={`wv2-image-preview ${fit?"fit":"zoomed"}`}><img src={url} alt={version?.fileName} style={fit?undefined:{width:`${zoom}%`}}/></div>
       :kind==="pdf"?<iframe src={url} title={version?.fileName}/>
-      :kind==="text"?<pre style={textStyle}>{text}</pre>
+      :kind==="office"&&version?<OfficeDocumentPreview key={version.id} projectId={projectId} versionId={version.id} title={version.fileName}/>:kind==="text"?<pre style={textStyle}>{text}</pre>
       :kind==="dwg"?(conversionStatus==="converted"?<iframe src={`${url}&reload=${reloadKey}`} title={`${version?.fileName} PDF 변환 미리보기`}/>:<div className="wv2-preview-empty"><RefreshCw size={26}/><b>{conversionStatus==="converting"?"DWG를 PDF로 변환하는 중입니다.":conversionStatus==="unconfigured"?"DWG 변환 서버 연결이 필요합니다.":conversionStatus==="failed"?"DWG 변환에 실패했습니다.":"DWG PDF 미리보기를 준비 중입니다."}</b><span>{conversionError||"원본 DWG는 정상 보관되며 변환 후 브라우저 미리보기가 제공됩니다."}</span><div><button disabled={conversionSaving} onClick={retryConversion}><RefreshCw size={18}/>{conversionSaving?"변환 요청 중…":"변환 다시 시도"}</button><a href={download} download><Download size={18}/>원본 다운로드</a></div></div>)
       :<div className="wv2-preview-empty"><ExternalLink size={26}/><b>이 형식은 브라우저 내 미리보기를 지원하지 않습니다.</b><span>다운로드하여 원본 프로그램에서 확인해 주세요.</span><a href={download}>파일 열기</a></div>}
     </main>
   </div>;
 }
+

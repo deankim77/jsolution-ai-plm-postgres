@@ -1,0 +1,57 @@
+name: Office attachment preview
+on:
+  pull_request:
+    paths:
+      - 'app/**'
+      - 'db/**'
+      - 'lib/office-preview.mjs'
+      - 'services/office-*.mjs'
+      - 'scripts/office-preview-worker.mjs'
+      - 'drizzle-postgres/**'
+      - 'tests/office-preview*.mjs'
+      - 'tests/fixtures/office-preview-fixtures.py'
+      - '.github/workflows/office-preview.yml'
+      - 'package.json'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  office-preview:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: preview_test
+          POSTGRES_DB: preview_test
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd pg_isready --health-interval 5s --health-timeout 5s --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22.19.0'
+      - run: npm install --ignore-scripts --no-audit --no-fund
+      - run: sudo apt-get update -qq && sudo apt-get install -y --no-install-recommends libreoffice-writer libreoffice-calc libreoffice-impress fonts-noto-cjk
+      - run: npm run check:architecture && npm run check:v2-ui && npm run audit:react-dom
+      - name: Compile changed TypeScript modules
+        run: |
+          node --input-type=module <<'JS'
+          import ts from 'typescript';
+          import fs from 'node:fs';
+          const files=['app/office-document-preview.tsx','app/document-file-preview-view.tsx','app/v2/document-preview-renderer.tsx','app/v2/document-preview-overlay.tsx','app/v2/document-preview-workspace-impl.tsx','app/api/projects/[projectId]/deliverables/route.ts','db/office-preview-schema.ts','db/index.ts','drizzle.config.ts'];
+          for(const file of files){
+            const result=ts.transpileModule(fs.readFileSync(file,'utf8'),{fileName:file,reportDiagnostics:true,compilerOptions:{target:ts.ScriptTarget.ES2022,module:ts.ModuleKind.ESNext,jsx:ts.JsxEmit.ReactJSX}});
+            const errors=result.diagnostics?.filter(item=>item.category===ts.DiagnosticCategory.Error)||[];
+            if(errors.length)throw new Error(ts.formatDiagnosticsWithColorAndContext(errors,{getCanonicalFileName:x=>x,getCurrentDirectory:()=>process.cwd(),getNewLine:()=>String.fromCharCode(10)}));
+          }
+          JS
+      - run: node --test tests/office-preview.test.mjs tests/office-preview-integration.test.mjs
+        env:
+          OFFICE_PREVIEW_TEST_DATABASE_URL: postgres://postgres:preview_test@localhost:5432/preview_test
+          OFFICE_PREVIEW_TEST_LIBREOFFICE: '1'
+          LIBREOFFICE_PATH: /usr/bin/soffice
