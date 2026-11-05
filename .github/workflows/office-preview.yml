@@ -18,6 +18,17 @@ on:
 permissions:
   contents: read
 jobs:
+  preview-animation:
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22.19.0'
+      - run: node --test tests/office-preview-animation.test.mjs
+        env:
+          OFFICE_PREVIEW_TEST_BROWSER: google-chrome
   office-preview:
     runs-on: ubuntu-latest
     timeout-minutes: 15
