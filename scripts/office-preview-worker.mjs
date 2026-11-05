@@ -22,4 +22,4 @@ try{
       else await delay(2000);
     }catch(error){console.error("[office-preview] worker iteration failed",error);await delay(5000)}
   }
-}finally{await pool.end()}
+}finally{await pool.end();console.info("[office-preview] worker stopped")}

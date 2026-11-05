@@ -50,8 +50,16 @@ export async function convertOfficePdf(buffer,fileName,{executable=process.env.L
   }
 }
 
-export async function processOfficeJob({repository,storage,job,token,convert=convertOfficePdf}){
+function writeOfficeLog(event,details){
+  const line=`[office-preview] ${event} ${JSON.stringify({at:new Date().toISOString(),...details})}`;
+  if(event==="FAILED")console.error(line);else console.info(line);
+}
+
+export async function processOfficeJob({repository,storage,job,token,convert=convertOfficePdf,log=writeOfficeLog}){
   let previewKey;
+  const started=Date.now();
+  const context={fileName:job.fileName,versionId:job.versionId,projectId:job.projectId,revision:job.revision};
+  log("STARTED",context);
   try{
     const source=await storage.get(job.fileKey);
     if(!source)throw new Error("원본 첨부파일을 찾을 수 없습니다.");
@@ -60,10 +68,16 @@ export async function processOfficeJob({repository,storage,job,token,convert=con
     // A stale lease writes a distinct object and cannot overwrite a newer PDF.
     previewKey=`${job.projectId}/${job.deliverableId}/${job.versionId}-office-${token}.pdf`;
     await storage.put(previewKey,new Uint8Array(pdf).buffer,{httpMetadata:{contentType:"application/pdf"},customMetadata:{sourceVersionId:job.versionId,previewKind:"office-pdf"}});
-    if(!await repository.finish(job.versionId,token,previewKey))await storage.delete(previewKey);
+    if(await repository.finish(job.versionId,token,previewKey)){
+      log("COMPLETED",{...context,elapsedMs:Date.now()-started,pdfBytes:pdf.byteLength});
+    }else{
+      await storage.delete(previewKey);
+      log("SKIPPED",{...context,elapsedMs:Date.now()-started,reason:"Revision deleted or worker lease superseded"});
+    }
   }catch(reason){
     if(previewKey)await storage.delete(previewKey).catch(()=>{});
     const message=reason?.code==="ENOENT"?"LibreOffice 실행 경로 또는 변환 결과를 확인해 주세요.":reason?.killed?"미리보기 변환 제한 시간을 초과했습니다.":String(reason?.message||"미리보기 생성에 실패했습니다.").slice(0,500);
+    log("FAILED",{...context,elapsedMs:Date.now()-started,error:message});
     await repository.finish(job.versionId,token,null,message);
   }
 }

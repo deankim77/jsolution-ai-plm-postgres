@@ -70,3 +70,20 @@ test("converter rejects unsupported, empty and oversized input before launching 
   await assert.rejects(convertOfficePdf(Buffer.alloc(0),"file.docx"),/빈 파일/);
   await assert.rejects(convertOfficePdf(Buffer.alloc(2),"file.docx",{maxBytes:1}),/용량/);
 });
+
+test("per-file logs include start, completion, version, duration and PDF size",async()=>{
+  const events=[];
+  await processOfficeJob({storage:fakeStorage(),job,token:"logged",repository:{async finish(){return true}},async convert(){return Buffer.from("%PDF-test")},log:(event,details)=>events.push({event,...details})});
+  assert.deepEqual(events.map(item=>item.event),["STARTED","COMPLETED"]);
+  assert.equal(events[1].fileName,"report.docx");assert.equal(events[1].versionId,"v1");
+  assert.equal(events[1].pdfBytes,9);assert.ok(events[1].elapsedMs>=0);
+});
+
+test("failed or discarded jobs never log a successful completion",async()=>{
+  for(const fail of [false,true]){
+    const events=[];
+    await processOfficeJob({storage:fakeStorage(),job,token:"logged",repository:{async finish(){return false}},async convert(){if(fail)throw new Error("test conversion error");return Buffer.from("%PDF-test")},log:(event,details)=>events.push({event,...details})});
+    assert.deepEqual(events.map(item=>item.event),["STARTED",fail?"FAILED":"SKIPPED"]);
+    if(fail)assert.equal(events[1].error,"test conversion error");
+  }
+});
